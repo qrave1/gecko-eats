@@ -1,0 +1,19 @@
+package sql
+
+type Pet struct {
+	ID        string `db:"id"`
+	Name      string `db:"name"`
+	FoodCycle string `db:"food_cycle"` // JSON-строка: ["обычный", "обычный", "спец"]
+}
+
+type FoodType struct {
+	ID   string `db:"id"`
+	Name string `db:"name"`
+}
+
+type Feeding struct {
+	ID       int    `db:"id"`
+	Date     string `db:"date"`      // формат YYYY-MM-DD
+	PetID    string `db:"pet_id"`    // имя питомца
+	FoodType string `db:"food_type"` // строковое описание типа пищи
+}
