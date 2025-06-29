@@ -1,2 +1,5 @@
 .idea/
 
+test_config.yaml
+
+*.db

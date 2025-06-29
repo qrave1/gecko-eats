@@ -7,6 +7,7 @@ import (
 	"github.com/qrave1/gecko-eats/internal/infrastructure/telegram/middleware"
 	"github.com/qrave1/gecko-eats/internal/repository"
 	tele "gopkg.in/telebot.v4"
+	teleMid "gopkg.in/telebot.v4/middleware"
 )
 
 type BotServer struct {
@@ -20,7 +21,10 @@ func NewBotServer(bot *tele.Bot, repo repository.Repository, whitelist []int64) 
 		repo: repo,
 	}
 
+	botServer.registerHandlers()
+
 	botServer.bot.Use(middleware.WhitelistOnly(whitelist))
+	botServer.bot.Use(teleMid.AutoRespond())
 
 	return botServer, nil
 }

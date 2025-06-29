@@ -9,6 +9,9 @@ import (
 	"github.com/qrave1/gecko-eats/internal/infrastructure/cron"
 	"github.com/qrave1/gecko-eats/internal/infrastructure/telegram"
 	"github.com/qrave1/gecko-eats/internal/repository"
+
+	_ "github.com/glebarez/sqlite"
+
 	tele "gopkg.in/telebot.v4"
 )
 
@@ -41,6 +44,25 @@ func ProvideSQLXConnection(cfg *config.Config) (*sqlx.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	conn.Exec(
+		`
+	CREATE TABLE IF NOT EXISTS pets
+	(
+		id         VARCHAR(36)  PRIMARY KEY,
+		name       VARCHAR(255) NOT NULL UNIQUE,
+		food_cycle VARCHAR(255)
+	);
+	
+	CREATE TABLE IF NOT EXISTS feedings
+	(
+		id        INTEGER PRIMARY KEY AUTOINCREMENT,
+		date      VARCHAR(10)  NOT NULL UNIQUE,
+		pet_id    VARCHAR(36)  NOT NULL,
+		food_type VARCHAR(255) NOT NULL
+	);
+`,
+	)
 
 	return conn, nil
 }

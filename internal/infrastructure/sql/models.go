@@ -1,14 +1,15 @@
 package sql
 
+import "github.com/google/uuid"
+
 type Pet struct {
 	ID        string `db:"id"`
 	Name      string `db:"name"`
 	FoodCycle string `db:"food_cycle"` // JSON-строка: ["обычный", "обычный", "спец"]
 }
 
-type FoodType struct {
-	ID   string `db:"id"`
-	Name string `db:"name"`
+func NewPet(name string) *Pet {
+	return &Pet{ID: uuid.New().String(), Name: name, FoodCycle: `["Кальций", "Кальций", "Кальций","Витамины"]`}
 }
 
 type Feeding struct {

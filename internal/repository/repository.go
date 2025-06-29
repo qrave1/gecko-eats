@@ -10,10 +10,12 @@ type Repository interface {
 	Pets() ([]sql.Pet, error)
 	PetByID(id string) (*sql.Pet, error)
 	PetByName(name string) (*sql.Pet, error)
+	AddPet(pet *sql.Pet) error
 
 	// Feedings section
 	Feedings(petID string, limit int) ([]sql.Feeding, error)
 	FeedingsByDate(date string) ([]sql.Feeding, error)
+	AddFeeding(petID, date, foodType string) error
 
 	// Others section
 	IsWhitelisted(id int64) bool
@@ -62,6 +64,16 @@ func (r *SqlxRepository) PetByID(ID string) (*sql.Pet, error) {
 	return &pet, nil
 }
 
+func (r *SqlxRepository) AddPet(pet *sql.Pet) error {
+	_, err := r.db.Exec("INSERT INTO pets (id, name, food_cycle) VALUES (?, ?, ?)", pet.ID, pet.Name, pet.FoodCycle)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *SqlxRepository) Feedings(petID string, limit int) ([]sql.Feeding, error) {
 	var list []sql.Feeding
 
@@ -94,6 +106,16 @@ func (r *SqlxRepository) FeedingsByDate(date string) ([]sql.Feeding, error) {
 	)
 
 	return list, err
+}
+
+func (r *SqlxRepository) AddFeeding(petID, date, foodType string) error {
+	_, err := r.db.Exec("INSERT INTO feedings (pet_id, date, food_type) VALUES (?, ?, ?)", petID, date, foodType)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *SqlxRepository) IsWhitelisted(id int64) bool {

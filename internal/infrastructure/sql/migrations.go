@@ -5,7 +5,7 @@ import (
 	"embed"
 	"log"
 
-	_ "github.com/glebarez/sqlite"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/rubenv/sql-migrate"
 )
 
@@ -13,7 +13,7 @@ import (
 var migrationFiles embed.FS
 
 func RunMigrations(path string) error {
-	db, err := sql.Open("sqlite", path)
+	db, err := sql.Open("sqlite3", path)
 
 	if err != nil {
 		return err
@@ -25,7 +25,7 @@ func RunMigrations(path string) error {
 		Root:       "migrations",
 	}
 
-	n, err := migrate.Exec(db, "sqlite", source, migrate.Up)
+	n, err := migrate.Exec(db, "sqlite3", source, migrate.Up)
 
 	if err != nil {
 		return err
