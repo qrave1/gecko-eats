@@ -12,7 +12,7 @@ RUN go mod download
 COPY . .
 
 # Встроим миграции в бинарь, если используешь embed
-RUN CGO_ENABLED=0 go build -o gecko-eats ./main.go
+RUN CGO_ENABLED=0 go build -o gecko-eats ./cmd/main.go
 
 # финальный образ
 FROM alpine:latest

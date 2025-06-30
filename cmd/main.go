@@ -6,8 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/qrave1/gecko-eats/cmd/provider"
-	"github.com/qrave1/gecko-eats/cmd/wire"
+	"github.com/qrave1/gecko-eats/cmd/app"
 	"github.com/qrave1/gecko-eats/internal/infrastructure/sql"
 	"github.com/urfave/cli/v3"
 )
@@ -15,7 +14,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	app := &cli.Command{
+	cliApp := &cli.Command{
 		Name:  "gecko-feeder",
 		Usage: "bot for feeding geckos",
 		Flags: []cli.Flag{
@@ -31,15 +30,14 @@ func main() {
 				Name:  "notify",
 				Usage: "cron job to notify about today's feedings",
 				Action: func(ctx context.Context, c *cli.Command) error {
-					provider.CONFIG_PATH = c.String("config")
-
-					notifySvc, err := wire.InitializeNotifyService(ctx)
-
+					// Initialize the application
+					application, err := app.NewApp(c.String("config"))
 					if err != nil {
 						panic(err)
 					}
 
-					if err = notifySvc.Notifier.Notify(ctx); err != nil {
+					// Run the notifier
+					if err = application.RunNotifier(ctx); err != nil {
 						panic(err)
 					}
 
@@ -50,23 +48,21 @@ func main() {
 				Name:  "migrate",
 				Usage: "run SQL database migrations",
 				Action: func(ctx context.Context, c *cli.Command) error {
-					provider.CONFIG_PATH = c.String("config")
-
-					return sql.RunMigrations(provider.CONFIG_PATH)
+					return sql.RunMigrations(c.String("config"))
 				},
 			},
 		},
 		Action: func(ctx context.Context, c *cli.Command) error {
-			provider.CONFIG_PATH = c.String("config")
-
-			_, err := wire.InitializeBotService(ctx)
-
+			// Initialize the application
+			application, err := app.NewApp(c.String("config"))
 			if err != nil {
 				panic(err)
 			}
 
-			exit := make(chan os.Signal, 1)
+			// Start the bot
+			application.StartBot(ctx)
 
+			exit := make(chan os.Signal, 1)
 			signal.Notify(exit, syscall.SIGINT, syscall.SIGTERM)
 
 			select {
@@ -79,7 +75,7 @@ func main() {
 		},
 	}
 
-	if err := app.Run(ctx, os.Args); err != nil {
+	if err := cliApp.Run(ctx, os.Args); err != nil {
 		panic(err)
 	}
 }

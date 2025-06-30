@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/wire"
 	"github.com/jmoiron/sqlx"
 	"github.com/qrave1/gecko-eats/internal/config"
 	"github.com/qrave1/gecko-eats/internal/infrastructure/cron"
@@ -15,24 +14,6 @@ import (
 	_ "github.com/glebarez/sqlite"
 
 	tele "gopkg.in/telebot.v4"
-)
-
-var BotServiceSet = wire.NewSet(
-	ProvideConfig,
-	ProvideLogger,
-	ProvideSQLXConnection,
-	ProvideRepository,
-	ProvideTeleBot,
-	ProvideBotServer,
-)
-
-var NotifyServiceSet = wire.NewSet(
-	ProvideConfig,
-	ProvideLogger,
-	ProvideSQLXConnection,
-	ProvideRepository,
-	ProvideTeleBot,
-	ProvideNotifier,
 )
 
 func ProvideConfig() (*config.Config, error) {
@@ -90,7 +71,7 @@ func ProvideSQLXConnection(cfg *config.Config) (*sqlx.DB, error) {
 		name       VARCHAR(255) NOT NULL UNIQUE,
 		food_cycle VARCHAR(255)
 	);
-	
+
 	CREATE TABLE IF NOT EXISTS feedings
 	(
 		date      VARCHAR(10)  NOT NULL,

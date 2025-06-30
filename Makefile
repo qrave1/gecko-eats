@@ -2,7 +2,7 @@
 REGISTRY=qrave1/gecko-eats
 TAG=build_$(shell date '+%Y_%m_%d_%H_%M_%S')
 
-.PHONY: build push generate run latest
+.PHONY: build push run latest
 
 # Сборка образа
 build:
@@ -15,9 +15,6 @@ latest:
 	@echo "Building and pushing latest image..."
 	@docker build -t $(REGISTRY):latest .
 	@docker push $(REGISTRY):latest
-
-generate:
-	@wire gen  ./cmd/wire
 
 run:
 	@docker compose up --build
