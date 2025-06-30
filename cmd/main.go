@@ -16,7 +16,7 @@ func main() {
 
 	cliApp := &cli.Command{
 		Name:  "gecko-feeder",
-		Usage: "bot for feeding geckos",
+		Usage: "bot for feed geckos",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",
@@ -28,7 +28,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "notify",
-				Usage: "cron job to notify about today's feedings",
+				Usage: "cron job to notify about today's feeds",
 				Action: func(ctx context.Context, c *cli.Command) error {
 					// Initialize the application
 					application, err := app.NewApp(c.String("config"))

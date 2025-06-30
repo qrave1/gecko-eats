@@ -8,9 +8,9 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/qrave1/gecko-eats/internal/config"
-	"github.com/qrave1/gecko-eats/internal/infrastructure/cron"
 	"github.com/qrave1/gecko-eats/internal/infrastructure/telegram"
 	"github.com/qrave1/gecko-eats/internal/repository"
+	"github.com/qrave1/gecko-eats/internal/usecase"
 
 	_ "github.com/glebarez/sqlite"
 	tele "gopkg.in/telebot.v4"
@@ -18,13 +18,14 @@ import (
 
 // App represents the main application with all its dependencies
 type App struct {
-	Config     *config.Config
-	Logger     *slog.Logger
-	DB         *sqlx.DB
-	Repository repository.Repository
-	Bot        *tele.Bot
-	BotServer  *telegram.BotServer
-	Notifier   *cron.Notifier
+	Config        *config.Config
+	Logger        *slog.Logger
+	DB            *sqlx.DB
+	Repository    repository.Repository
+	Bot           *tele.Bot
+	NotifyUsecase usecase.NotifyUsecaseInterface
+
+	BotServer *telegram.BotServer
 }
 
 // NewApp creates a new application instance with all dependencies
@@ -62,17 +63,17 @@ func NewApp(configPath string) (*App, error) {
 		return nil, err
 	}
 
-	// Create notifier
-	notifier := cron.NewNotifier(bot, repo, cfg.Bot.NotifyUserIDs)
+	// Create notifyUsecase
+	notifyUsecase := usecase.NewNotifyUsecase(bot, repo)
 
 	return &App{
-		Config:     cfg,
-		Logger:     logger,
-		DB:         db,
-		Repository: repo,
-		Bot:        bot,
-		BotServer:  botServer,
-		Notifier:   notifier,
+		Config:        cfg,
+		Logger:        logger,
+		DB:            db,
+		Repository:    repo,
+		Bot:           bot,
+		BotServer:     botServer,
+		NotifyUsecase: notifyUsecase,
 	}, nil
 }
 
@@ -83,7 +84,7 @@ func (a *App) StartBot(ctx context.Context) {
 
 // RunNotifier runs the notification process once
 func (a *App) RunNotifier(ctx context.Context) error {
-	return a.Notifier.Notify(ctx)
+	return a.NotifyUsecase.Notify(ctx, a.Config.Bot.NotifyUserIDs)
 }
 
 // Helper functions
@@ -122,19 +123,19 @@ func createDBConnection(cfg *config.Config) (*sqlx.DB, error) {
 
 	// Create tables if they don't exist
 	conn.Exec(`
-	CREATE TABLE IF NOT EXISTS pets
+	CREATE TABLE IF NOT EXISTS geckos
 	(
 		id         VARCHAR(36)  PRIMARY KEY,
 		name       VARCHAR(255) NOT NULL UNIQUE,
 		food_cycle VARCHAR(255)
 	);
 	
-	CREATE TABLE IF NOT EXISTS feedings
+	CREATE TABLE IF NOT EXISTS feeds
 	(
 		date      VARCHAR(10)  NOT NULL,
-		pet_id    VARCHAR(36)  NOT NULL,
+		gecko_id    VARCHAR(36)  NOT NULL,
 		food_type VARCHAR(255) NOT NULL,
-		PRIMARY KEY (date, pet_id)
+		PRIMARY KEY (gecko_id, date)
 	);
 	`)
 

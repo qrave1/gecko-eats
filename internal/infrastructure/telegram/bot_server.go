@@ -5,20 +5,28 @@ import (
 	"log/slog"
 
 	"github.com/qrave1/gecko-eats/internal/infrastructure/telegram/middleware"
-	"github.com/qrave1/gecko-eats/internal/repository"
+	"github.com/qrave1/gecko-eats/internal/usecase"
 	tele "gopkg.in/telebot.v4"
 	teleMid "gopkg.in/telebot.v4/middleware"
 )
 
 type BotServer struct {
-	bot  *tele.Bot
-	repo repository.Repository
+	bot *tele.Bot
+
+	geckoUsecase usecase.GeckoUsecase
+	feedUsecase  usecase.FeedUsecase
 }
 
-func NewBotServer(bot *tele.Bot, repo repository.Repository, whitelist []int64) (*BotServer, error) {
+func NewBotServer(
+	bot *tele.Bot,
+	geckoUsecase usecase.GeckoUsecase,
+	feedUsecase usecase.FeedUsecase,
+	whitelist []int64,
+) (*BotServer, error) {
 	botServer := &BotServer{
-		bot:  bot,
-		repo: repo,
+		bot:          bot,
+		geckoUsecase: geckoUsecase,
+		feedUsecase:  feedUsecase,
 	}
 
 	botServer.registerHandlers()
@@ -38,6 +46,6 @@ func (b *BotServer) Start(ctx context.Context) {
 	case <-ctx.Done():
 		b.bot.Stop()
 
-		slog.Info("bot stopped")
+		slog.Info("bot stopped", "username", b.bot.Me.Username)
 	}
 }

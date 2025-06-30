@@ -12,19 +12,9 @@ import (
 	tele "gopkg.in/telebot.v4"
 )
 
-var (
-	menu        = &tele.ReplyMarkup{ResizeKeyboard: true}
-	petSelector = &tele.ReplyMarkup{}
-	addPetMenu  = &tele.ReplyMarkup{}
-
-	btnViewPets   = menu.Data("📋 Питомцы", "viewPets")
-	btnAddPet     = menu.Data("➕ Добавить питомца", "addPet")
-	btnAddFeeding = menu.Data("➕ Добавить календарь", "addFeeding")
-)
-
 func (b *BotServer) registerHandlers() {
 	menu.Inline(
-		menu.Row(btnViewPets, btnAddPet, btnAddFeeding),
+		menu.Row(btnViewGeckos, btnAddGecko, btnAddfeed),
 	)
 
 	b.bot.Handle("/start", func(c tele.Context) error {
@@ -32,40 +22,14 @@ func (b *BotServer) registerHandlers() {
 	})
 
 	// показать список питомцев
-	b.bot.Handle(&btnViewPets, func(c tele.Context) error {
-		pets, err := b.repo.Pets()
+	b.bot.Handle(&btnViewGeckos, b.geckoListHandler)
 
-		if err != nil {
-			slog.Error("Ошибка получения питомцев", "error", err)
-
-			return c.Edit("Ошибка получения питомцев")
-		}
-
-		if len(pets) == 0 {
-			return c.Edit("Список пуст")
-		}
-
-		petSelector = &tele.ReplyMarkup{}
-
-		var rows []tele.Row
-
-		for _, p := range pets {
-			btn := petSelector.Data(p.Name, p.ID)
-
-			rows = append(rows, petSelector.Row(btn))
-		}
-
-		petSelector.Inline(rows...)
-
-		return c.Edit("Выберите питомца:", petSelector)
+	b.bot.Handle(&btnAddGecko, func(c tele.Context) error {
+		return c.Edit("Введите имя питомца в ответ на это сообщение для добавления питомца", addGeckoMenu)
 	})
 
-	b.bot.Handle(&btnAddPet, func(c tele.Context) error {
-		return c.Edit("Введите имя питомца в ответ на это сообщение для добавления питомца", addPetMenu)
-	})
-
-	b.bot.Handle(&btnAddFeeding, func(c tele.Context) error {
-		return c.Edit("Введите имя питомца и интервал кормления в формате: <имя> <интервал>", addPetMenu)
+	b.bot.Handle(&btnAddfeed, func(c tele.Context) error {
+		return c.Edit("Введите имя питомца и интервал кормления в формате: <имя> <интервал>", addGeckoMenu)
 	})
 
 	b.bot.Handle(tele.OnText, func(c tele.Context) error {
@@ -73,10 +37,15 @@ func (b *BotServer) registerHandlers() {
 			originalMsg := c.Message().ReplyTo.Text
 
 			if strings.Contains(originalMsg, "Введите имя питомца в ответ на это сообщение для добавления питомца") {
-				return b.newPet(c)
+				return b.newGecko(c)
 			} else if strings.Contains(originalMsg, "Введите имя питомца и интервал кормления в формате: <имя> <интервал>") {
-				return b.newFeeding(c)
+				return b.newfeed(c)
 			}
+		} else {
+			// если не в ответ на сообщение, то просто игнорируем
+			slog.Info("Получено сообщение без ответа", "text", c.Text())
+
+			return c.Send("Пожалуйста, ответьте на сообщение для добавления питомца или расписания")
 		}
 
 		return nil
@@ -84,31 +53,31 @@ func (b *BotServer) registerHandlers() {
 
 	// при выборе питомца — показать расписание
 	b.bot.Handle(tele.OnCallback, func(c tele.Context) error {
-		petID := c.Callback().Data
+		geckoID := c.Callback().Data
 
-		petID = strings.TrimPrefix(petID, "\f")
+		geckoID = strings.TrimPrefix(geckoID, "\f")
 
-		pet, err := b.repo.PetByID(petID)
+		gecko, err := b.repo.GeckoByID(geckoID)
 
 		if err != nil {
-			slog.Error("Ошибка получения питомца", "error", err, "petID", petID)
+			slog.Error("Ошибка получения питомца", "error", err, "geckoID", geckoID)
 
 			return c.Respond(&tele.CallbackResponse{Text: "Ошибка получения питомца"})
 		}
 
-		feedings, err := b.repo.Feedings(pet.ID, 100)
+		feeds, err := b.repo.feedsByPetID(gecko.ID, 100)
 
 		if err != nil {
-			slog.Error("Ошибка получения расписания", "error", err, "petID", petID)
+			slog.Error("Ошибка получения расписания", "error", err, "geckoID", geckoID)
 
 			return c.Respond(&tele.CallbackResponse{Text: "Ошибка получения расписания"})
 		}
 
 		var answerBuilder strings.Builder
 
-		answerBuilder.WriteString(fmt.Sprintf("📅 Расписание для %s:\n", pet.Name))
+		answerBuilder.WriteString(fmt.Sprintf("📅 Расписание для %s:\n", gecko.Name))
 
-		for _, f := range feedings {
+		for _, f := range feeds {
 			answerBuilder.WriteString(fmt.Sprintf("• %s — %s\n", f.Date, f.FoodType))
 		}
 
@@ -116,29 +85,7 @@ func (b *BotServer) registerHandlers() {
 	})
 }
 
-func (b *BotServer) newPet(c tele.Context) error {
-	pet := sql.NewPet(strings.Split(c.Message().Text, " ")[0])
-
-	err := b.repo.AddPet(pet)
-
-	if err != nil {
-		slog.Error("Ошибка добавления питомца", "error", err)
-
-		return c.Send("Ошибка добавления питомца", &tele.SendOptions{ReplyTo: c.Message()})
-	}
-
-	err = c.Send("Питомец добавлен!", &tele.SendOptions{ReplyTo: c.Message()})
-
-	if err != nil {
-		slog.Error("Ошибка отправки сообщения", "error", err)
-
-		return err
-	}
-
-	return nil
-}
-
-func (b *BotServer) newFeeding(c tele.Context) error {
+func (b *BotServer) newfeed(c tele.Context) error {
 	parts := strings.Split(c.Text(), " ")
 
 	if len(parts) != 2 {
@@ -148,13 +95,13 @@ func (b *BotServer) newFeeding(c tele.Context) error {
 		)
 	}
 
-	pet, err := b.repo.PetByName(parts[0])
+	gecko, err := b.repo.GeckoByName(parts[0])
 
 	if err != nil {
 		slog.Error(
-			"create feeding schedule: get pet by name",
+			"create feed schedule: get gecko by name",
 			"error", err,
-			"petName", parts[0],
+			"geckoName", parts[0],
 			"parts", parts,
 		)
 
@@ -163,22 +110,22 @@ func (b *BotServer) newFeeding(c tele.Context) error {
 
 	var foodCycleJSON []string
 
-	err = json.Unmarshal([]byte(pet.FoodCycle), &foodCycleJSON)
+	err = json.Unmarshal([]byte(gecko.FoodCycle), &foodCycleJSON)
 
 	if err != nil {
 		slog.Error(
-			"create feeding schedule: unmarshal food cycle",
+			"create feed schedule: unmarshal food cycle",
 			"error", err,
-			"food_cycle", pet.FoodCycle,
+			"food_cycle", gecko.FoodCycle,
 		)
 
 		return c.Send("Ошибка при обработке расписания кормления: "+err.Error(), &tele.SendOptions{ReplyTo: c.Message()})
 	}
 
-	err = b.repo.ClearFeedings(pet.ID)
+	err = b.repo.Clearfeeds(gecko.ID)
 
 	if err != nil {
-		slog.Error("Ошибка очистки кормлений", "error", err, "petID", pet.ID)
+		slog.Error("Ошибка очистки кормлений", "error", err, "geckoID", gecko.ID)
 
 		return c.Send("Ошибка при очистке кормлений", &tele.SendOptions{ReplyTo: c.Message()})
 	}
@@ -194,20 +141,20 @@ func (b *BotServer) newFeeding(c tele.Context) error {
 		)
 	}
 
-	createdFeedings := b.generateFeedingSchedule(time.Now(), pet.ID, foodCycleJSON, interval)
+	createdfeeds := b.generatefeedSchedule(time.Now(), gecko.ID, foodCycleJSON, interval)
 
 	return c.Send(
-		fmt.Sprintf("Расписание кормления создано: %d кормлений", createdFeedings),
+		fmt.Sprintf("Расписание кормления создано: %d кормлений", createdfeeds),
 		&tele.SendOptions{ReplyTo: c.Message()},
 	)
 }
 
-func (b *BotServer) generateFeedingSchedule(
+func (b *BotServer) generatefeedSchedule(
 	startDate time.Time,
-	petID string,
-	petCycle []string,
+	geckoID string,
+	geckoCycle []string,
 	interval int,
-) (createdFeedingsCount int) {
+) (createdfeedsCount int) {
 	endDate := startDate.AddDate(0, 1, 0) // +1 месяц
 
 	lastFoodIx := 0
@@ -216,7 +163,7 @@ func (b *BotServer) generateFeedingSchedule(
 		// TODO: добавить проверку на корректность даты
 
 		// TODO: бред какой-то, мб позже понадобится
-		//for i, foodType := range petCycle {
+		//for i, foodType := range geckoCycle {
 		//	parsedFoodType, err := time.Parse("2006-01-02", foodType)
 		//
 		//	if err != nil {
@@ -237,27 +184,27 @@ func (b *BotServer) generateFeedingSchedule(
 		// Вечернее кормление (18:00)
 		event := time.Date(d.Year(), d.Month(), d.Day(), 18, 0, 0, 0, d.Location())
 
-		err := b.repo.AddFeeding(petID, event.Format("2006-01-02"), petCycle[lastFoodIx])
+		err := b.repo.Addfeed(geckoID, event.Format("2006-01-02"), geckoCycle[lastFoodIx])
 
 		if err != nil {
 			slog.Error(
-				"add feeding",
+				"add feed",
 				slog.Any("error", err),
-				slog.String("pet_id", petID),
+				slog.String("gecko_id", geckoID),
 				slog.String("date", event.Format("2006-01-02")),
-				slog.String("food_type", petCycle[lastFoodIx]),
+				slog.String("food_type", geckoCycle[lastFoodIx]),
 			)
 		}
 
-		createdFeedingsCount++
+		createdfeedsCount++
 
 		// счётчик для следующего типа еды
-		if lastFoodIx < len(petCycle)-1 {
+		if lastFoodIx < len(geckoCycle)-1 {
 			lastFoodIx++
 		} else {
 			lastFoodIx = 0
 		}
 	}
 
-	return createdFeedingsCount
+	return createdfeedsCount
 }

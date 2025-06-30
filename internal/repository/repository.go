@@ -6,67 +6,63 @@ import (
 )
 
 type Repository interface {
-	// Pets section
-	Pets() ([]sql.Pet, error)
-	PetByID(id string) (*sql.Pet, error)
-	PetByName(name string) (*sql.Pet, error)
-	AddPet(pet *sql.Pet) error
+	// Geckos section
+	Geckos() ([]*sql.Gecko, error)
+	GeckoByID(id string) (*sql.Gecko, error)
+	GeckoByName(name string) (*sql.Gecko, error)
+	AddGecko(gecko *sql.Gecko) error
 
-	// Feedings section
-	Feedings(petID string, limit int) ([]sql.Feeding, error)
-	FeedingsByDate(date string) ([]sql.Feeding, error)
-	AddFeeding(petID, date, foodType string) error
-	ClearFeedings(petID string) error
-
-	// Others section
-	IsWhitelisted(id int64) bool
+	// feeds section
+	FeedsByGeckoID(geckoID string, limit int) ([]*sql.Feed, error)
+	FeedsByDate(date string) ([]*sql.Feed, error)
+	AddFeed(feed *sql.Feed) error
+	ClearFeed(geckoID string) error
 }
 
 type SqlxRepository struct {
-	db        *sqlx.DB
-	whitelist []int64
+	db *sqlx.DB
 }
 
 var _ Repository = (*SqlxRepository)(nil)
 
-func NewSqlxRepository(db *sqlx.DB, whitelist []int64) *SqlxRepository {
-	return &SqlxRepository{db: db, whitelist: whitelist}
+func NewSqlxRepository(db *sqlx.DB) *SqlxRepository {
+	return &SqlxRepository{db: db}
 }
 
-func (r *SqlxRepository) Pets() ([]sql.Pet, error) {
-	var pets []sql.Pet
+func (r *SqlxRepository) Geckos() ([]*sql.Gecko, error) {
+	var geckos []*sql.Gecko
 
-	err := r.db.Select(&pets, "SELECT * FROM pets ORDER BY name")
+	err := r.db.Select(&geckos, "SELECT * FROM geckos ORDER BY name")
 
-	return pets, err
+	return geckos, err
 }
 
-func (r *SqlxRepository) PetByName(name string) (*sql.Pet, error) {
-	var pet sql.Pet
+func (r *SqlxRepository) GeckoByName(name string) (*sql.Gecko, error) {
+	var gecko sql.Gecko
 
-	err := r.db.Get(&pet, "SELECT * FROM pets WHERE name = ?", name)
+	err := r.db.Get(&gecko, "SELECT * FROM geckos WHERE name = ?", name)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &pet, nil
+	return &gecko, nil
 }
 
-func (r *SqlxRepository) PetByID(ID string) (*sql.Pet, error) {
-	var pet sql.Pet
+func (r *SqlxRepository) GeckoByID(ID string) (*sql.Gecko, error) {
+	var gecko sql.Gecko
 
-	err := r.db.Get(&pet, "SELECT * FROM pets WHERE id = ?", ID)
+	err := r.db.Get(&gecko, "SELECT * FROM geckos WHERE id = ?", ID)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &pet, nil
+	return &gecko, nil
 }
 
-func (r *SqlxRepository) AddPet(pet *sql.Pet) error {
-	_, err := r.db.Exec("INSERT INTO pets (id, name, food_cycle) VALUES (?, ?, ?)", pet.ID, pet.Name, pet.FoodCycle)
+func (r *SqlxRepository) AddGecko(gecko *sql.Gecko) error {
+	_, err := r.db.Exec("INSERT INTO geckos (id, name, food_cycle) VALUES (?, ?, ?)", gecko.ID, gecko.Name, gecko.FoodCycle)
 
 	if err != nil {
 		return err
@@ -75,33 +71,33 @@ func (r *SqlxRepository) AddPet(pet *sql.Pet) error {
 	return nil
 }
 
-func (r *SqlxRepository) Feedings(petID string, limit int) ([]sql.Feeding, error) {
-	var list []sql.Feeding
+func (r *SqlxRepository) FeedsByGeckoID(geckoID string, limit int) ([]*sql.Feed, error) {
+	var list []*sql.Feed
 
 	err := r.db.Select(
 		&list,
 		`
-			SELECT * FROM feedings
-			WHERE pet_id = ?
+			SELECT * FROM feeds
+			WHERE gecko_id = ?
 			ORDER BY date ASC
 			LIMIT ?
 				`,
-		petID,
+		geckoID,
 		limit,
 	)
 
 	return list, err
 }
 
-func (r *SqlxRepository) FeedingsByDate(date string) ([]sql.Feeding, error) {
-	var list []sql.Feeding
+func (r *SqlxRepository) FeedsByDate(date string) ([]*sql.Feed, error) {
+	var list []*sql.Feed
 
 	err := r.db.Select(
 		&list,
 		`
-			SELECT * FROM feedings
+			SELECT * FROM feeds
 			WHERE date = ?
-			ORDER BY pet_id ASC
+			ORDER BY gecko_id ASC
 				`,
 		date,
 	)
@@ -109,8 +105,13 @@ func (r *SqlxRepository) FeedingsByDate(date string) ([]sql.Feeding, error) {
 	return list, err
 }
 
-func (r *SqlxRepository) AddFeeding(petID, date, foodType string) error {
-	_, err := r.db.Exec("INSERT INTO feedings (pet_id, date, food_type) VALUES (?, ?, ?)", petID, date, foodType)
+func (r *SqlxRepository) AddFeed(feed *sql.Feed) error {
+	_, err := r.db.Exec(
+		"INSERT INTO feeds (gecko_id, date, food_type) VALUES (?, ?, ?)",
+		feed.GeckoID,
+		feed.Date,
+		feed.FoodType,
+	)
 
 	if err != nil {
 		return err
@@ -119,22 +120,12 @@ func (r *SqlxRepository) AddFeeding(petID, date, foodType string) error {
 	return nil
 }
 
-func (r *SqlxRepository) ClearFeedings(petID string) error {
-	_, err := r.db.Exec("DELETE FROM feedings WHERE pet_id = ?", petID)
+func (r *SqlxRepository) ClearFeed(geckoID string) error {
+	_, err := r.db.Exec("DELETE FROM feeds WHERE gecko_id = ?", geckoID)
 
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (r *SqlxRepository) IsWhitelisted(id int64) bool {
-	for _, userID := range r.whitelist {
-		if userID == id {
-			return true
-		}
-	}
-
-	return false
 }
