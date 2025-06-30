@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -95,7 +96,7 @@ func (b *BotServer) registerHandlers() {
 			return c.Respond(&tele.CallbackResponse{Text: "Ошибка получения питомца"})
 		}
 
-		feedings, err := b.repo.Feedings(pet.ID, 10)
+		feedings, err := b.repo.Feedings(pet.ID, 100)
 
 		if err != nil {
 			slog.Error("Ошибка получения расписания", "error", err, "petID", petID)
@@ -174,10 +175,29 @@ func (b *BotServer) newFeeding(c tele.Context) error {
 		return c.Send("Ошибка при обработке расписания кормления: "+err.Error(), &tele.SendOptions{ReplyTo: c.Message()})
 	}
 
-	schedule := b.generateFeedingSchedule(time.Now(), pet.ID, foodCycleJSON)
+	err = b.repo.ClearFeedings(pet.ID)
+
+	if err != nil {
+		slog.Error("Ошибка очистки кормлений", "error", err, "petID", pet.ID)
+
+		return c.Send("Ошибка при очистке кормлений", &tele.SendOptions{ReplyTo: c.Message()})
+	}
+
+	interval, err := strconv.Atoi(parts[1])
+
+	if err != nil {
+		slog.Error("Ошибка при преобразовании интервала кормления", "error", err, "interval", parts[1])
+
+		return c.Send(
+			"Неверный формат интервала. Введите число в формате: <имя> <интервал>",
+			&tele.SendOptions{ReplyTo: c.Message()},
+		)
+	}
+
+	createdFeedings := b.generateFeedingSchedule(time.Now(), pet.ID, foodCycleJSON, interval)
 
 	return c.Send(
-		fmt.Sprintf("Расписание кормления создано: %d кормлений", len(schedule)),
+		fmt.Sprintf("Расписание кормления создано: %d кормлений", createdFeedings),
 		&tele.SendOptions{ReplyTo: c.Message()},
 	)
 }
@@ -186,52 +206,58 @@ func (b *BotServer) generateFeedingSchedule(
 	startDate time.Time,
 	petID string,
 	petCycle []string,
-) []sql.Feeding {
-	var schedule []sql.Feeding
-
+	interval int,
+) (createdFeedingsCount int) {
 	endDate := startDate.AddDate(0, 1, 0) // +1 месяц
 
-	lastIx := 0
+	lastFoodIx := 0
 
-	for d := startDate; d.Before(endDate); d = d.AddDate(0, 0, 1) {
-		// Проверяем что дата существует (не 31 февраля и т.п.)
-		if d.Day() != startDate.Day() && d.Day() < startDate.Day() {
-			continue // Пропускаем несуществующие даты
-		}
+	for d := startDate; d.Before(endDate); d = d.AddDate(0, 0, interval) {
+		// TODO: добавить проверку на корректность даты
 
-		for i, foodType := range petCycle {
-			parsedFoodType, err := time.Parse("2006-01-02", foodType)
-
-			if err != nil {
-				slog.Error("Ошибка при парсинге даты кормления", "error", err, "foodType", foodType)
-
-				continue // Пропускаем некорректные даты
-			}
-
-			if parsedFoodType.Year() == d.Year() &&
-				parsedFoodType.Month() == d.Month() &&
-				parsedFoodType.Day() == d.Day() {
-
-				lastIx = i
-				break
-			}
-		}
+		// TODO: бред какой-то, мб позже понадобится
+		//for i, foodType := range petCycle {
+		//	parsedFoodType, err := time.Parse("2006-01-02", foodType)
+		//
+		//	if err != nil {
+		//		slog.Error("Ошибка при парсинге даты кормления", "error", err, "foodType", foodType)
+		//
+		//		continue // Пропускаем некорректные даты
+		//	}
+		//
+		//	if parsedFoodType.Year() == d.Year() &&
+		//		parsedFoodType.Month() == d.Month() &&
+		//		parsedFoodType.Day() == d.Day() {
+		//
+		//		lastIx = i
+		//		break
+		//	}
+		//}
 
 		// Вечернее кормление (18:00)
-		evening := time.Date(d.Year(), d.Month(), d.Day(), 18, 0, 0, 0, d.Location())
+		event := time.Date(d.Year(), d.Month(), d.Day(), 18, 0, 0, 0, d.Location())
 
-		err := b.repo.AddFeeding(petID, evening.Format("2006-01-02"), petCycle[lastIx])
+		err := b.repo.AddFeeding(petID, event.Format("2006-01-02"), petCycle[lastFoodIx])
 
 		if err != nil {
 			slog.Error(
 				"add feeding",
 				slog.Any("error", err),
 				slog.String("pet_id", petID),
-				slog.String("date", evening.Format("2006-01-02")),
-				slog.String("food_type", petCycle[lastIx]),
+				slog.String("date", event.Format("2006-01-02")),
+				slog.String("food_type", petCycle[lastFoodIx]),
 			)
+		}
+
+		createdFeedingsCount++
+
+		// счётчик для следующего типа еды
+		if lastFoodIx < len(petCycle)-1 {
+			lastFoodIx++
+		} else {
+			lastFoodIx = 0
 		}
 	}
 
-	return schedule
+	return createdFeedingsCount
 }

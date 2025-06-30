@@ -3,3 +3,4 @@
 test_config.yaml
 
 *.db
+*.db-journal

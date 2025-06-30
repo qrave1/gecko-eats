@@ -16,6 +16,7 @@ type Repository interface {
 	Feedings(petID string, limit int) ([]sql.Feeding, error)
 	FeedingsByDate(date string) ([]sql.Feeding, error)
 	AddFeeding(petID, date, foodType string) error
+	ClearFeedings(petID string) error
 
 	// Others section
 	IsWhitelisted(id int64) bool
@@ -110,6 +111,16 @@ func (r *SqlxRepository) FeedingsByDate(date string) ([]sql.Feeding, error) {
 
 func (r *SqlxRepository) AddFeeding(petID, date, foodType string) error {
 	_, err := r.db.Exec("INSERT INTO feedings (pet_id, date, food_type) VALUES (?, ?, ?)", petID, date, foodType)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *SqlxRepository) ClearFeedings(petID string) error {
+	_, err := r.db.Exec("DELETE FROM feedings WHERE pet_id = ?", petID)
 
 	if err != nil {
 		return err
