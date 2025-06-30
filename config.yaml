@@ -1,9 +1,11 @@
-
 bot:
   token: "YOUR_BOT_TOKEN_HERE"
   whitelist:
     - 123456789
     - 987654321
+  notify_user_ids:
+    - 1122334455
+    - 5566778899
 
 database:
   path: "./gecko.db"

@@ -13,8 +13,12 @@ import (
 
 // Injectors from wire.go:
 
-func InitializeBotService(contextContext context.Context, string2 string) (*provider.BotService, error) {
+func InitializeBotService(contextContext context.Context) (*provider.BotService, error) {
 	config, err := provider.ProvideConfig()
+	if err != nil {
+		return nil, err
+	}
+	logger, err := provider.ProvideLogger(config)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +31,7 @@ func InitializeBotService(contextContext context.Context, string2 string) (*prov
 		return nil, err
 	}
 	repository := provider.ProvideRepository(config, db)
-	botServer, err := provider.ProvideBotServer(bot, repository, config)
+	botServer, err := provider.ProvideBotServer(logger, bot, repository, config)
 	if err != nil {
 		return nil, err
 	}
@@ -35,8 +39,12 @@ func InitializeBotService(contextContext context.Context, string2 string) (*prov
 	return botService, nil
 }
 
-func InitializeNotifyService(contextContext context.Context, string2 string) (*provider.NotifyService, error) {
+func InitializeNotifyService(contextContext context.Context) (*provider.NotifyService, error) {
 	config, err := provider.ProvideConfig()
+	if err != nil {
+		return nil, err
+	}
+	logger, err := provider.ProvideLogger(config)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +57,7 @@ func InitializeNotifyService(contextContext context.Context, string2 string) (*p
 		return nil, err
 	}
 	repository := provider.ProvideRepository(config, db)
-	notifier := provider.ProvideNotifier(bot, repository, config)
+	notifier := provider.ProvideNotifier(logger, bot, repository, config)
 	notifyService := provider.ProvideNotifyService(notifier)
 	return notifyService, nil
 }

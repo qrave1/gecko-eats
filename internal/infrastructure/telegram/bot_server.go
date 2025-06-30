@@ -32,6 +32,8 @@ func NewBotServer(bot *tele.Bot, repo repository.Repository, whitelist []int64) 
 func (b *BotServer) Start(ctx context.Context) {
 	go b.bot.Start()
 
+	slog.Info("bot started", "username", b.bot.Me.Username)
+
 	select {
 	case <-ctx.Done():
 		b.bot.Stop()

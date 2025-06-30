@@ -10,7 +10,7 @@ import (
 	"github.com/qrave1/gecko-eats/cmd/provider"
 )
 
-func InitializeBotService(_ context.Context, _ string) (*provider.BotService, error) {
+func InitializeBotService(_ context.Context) (*provider.BotService, error) {
 	wire.Build(
 		provider.BotServiceSet,
 		provider.ProvideBotService,
@@ -19,7 +19,7 @@ func InitializeBotService(_ context.Context, _ string) (*provider.BotService, er
 	return &provider.BotService{}, nil
 }
 
-func InitializeNotifyService(_ context.Context, _ string) (*provider.NotifyService, error) {
+func InitializeNotifyService(_ context.Context) (*provider.NotifyService, error) {
 	wire.Build(
 		provider.NotifyServiceSet,
 		provider.ProvideNotifyService,

@@ -1,6 +1,8 @@
 package provider
 
 import (
+	"log/slog"
+	"os"
 	"time"
 
 	"github.com/google/wire"
@@ -17,6 +19,7 @@ import (
 
 var BotServiceSet = wire.NewSet(
 	ProvideConfig,
+	ProvideLogger,
 	ProvideSQLXConnection,
 	ProvideRepository,
 	ProvideTeleBot,
@@ -25,6 +28,7 @@ var BotServiceSet = wire.NewSet(
 
 var NotifyServiceSet = wire.NewSet(
 	ProvideConfig,
+	ProvideLogger,
 	ProvideSQLXConnection,
 	ProvideRepository,
 	ProvideTeleBot,
@@ -32,10 +36,43 @@ var NotifyServiceSet = wire.NewSet(
 )
 
 func ProvideConfig() (*config.Config, error) {
-	// TODO: delete hardcode
-	path := "./config.yaml"
+	return config.New(CONFIG_PATH)
+}
 
-	return config.New(path)
+func ProvideLogger(_ *config.Config) (*slog.Logger, error) {
+	level := slog.LevelInfo
+
+	// TODO: log level from config
+
+	replaceAttrFunc := func(groups []string, attributes slog.Attr) slog.Attr {
+		if attributes.Key == "msg" {
+			return slog.Attr{
+				Key:   "message",
+				Value: attributes.Value,
+			}
+		}
+
+		return attributes
+	}
+
+	options := &slog.HandlerOptions{
+		Level:       level,
+		ReplaceAttr: replaceAttrFunc,
+	}
+
+	//handlers := make([]slog.Handler, 0, 2)
+
+	jsonHandler := slog.NewJSONHandler(os.Stdout, options)
+
+	//handlers = append(handlers, jsonHandler)
+
+	logger := slog.New(jsonHandler)
+
+	slog.SetDefault(logger)
+
+	logger.Info("start with config", slog.Any("config_path", CONFIG_PATH))
+
+	return logger, nil
 }
 
 func ProvideSQLXConnection(cfg *config.Config) (*sqlx.DB, error) {
@@ -87,6 +124,7 @@ func ProvideTeleBot(cfg *config.Config) (*tele.Bot, error) {
 }
 
 func ProvideBotServer(
+	_ *slog.Logger,
 	bot *tele.Bot,
 	repo repository.Repository,
 	cfg *config.Config,
@@ -95,6 +133,7 @@ func ProvideBotServer(
 }
 
 func ProvideNotifier(
+	_ *slog.Logger,
 	bot *tele.Bot,
 	repo repository.Repository,
 	cfg *config.Config,

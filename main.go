@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/qrave1/gecko-eats/cmd/provider"
 	"github.com/qrave1/gecko-eats/cmd/wire"
 	"github.com/qrave1/gecko-eats/internal/infrastructure/sql"
 	"github.com/urfave/cli/v3"
@@ -30,7 +31,9 @@ func main() {
 				Name:  "notify",
 				Usage: "cron job to notify about today's feedings",
 				Action: func(ctx context.Context, c *cli.Command) error {
-					_, err := wire.InitializeNotifyService(ctx, c.String("config"))
+					provider.CONFIG_PATH = c.String("config")
+
+					_, err := wire.InitializeNotifyService(ctx)
 
 					if err != nil {
 						panic(err)
@@ -43,12 +46,16 @@ func main() {
 				Name:  "migrate",
 				Usage: "run SQL database migrations",
 				Action: func(ctx context.Context, c *cli.Command) error {
-					return sql.RunMigrations(c.String("config"))
+					provider.CONFIG_PATH = c.String("config")
+
+					return sql.RunMigrations(provider.CONFIG_PATH)
 				},
 			},
 		},
 		Action: func(ctx context.Context, c *cli.Command) error {
-			_, err := wire.InitializeBotService(ctx, c.String("config"))
+			provider.CONFIG_PATH = c.String("config")
+
+			_, err := wire.InitializeBotService(ctx)
 
 			if err != nil {
 				panic(err)
