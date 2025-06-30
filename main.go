@@ -33,9 +33,13 @@ func main() {
 				Action: func(ctx context.Context, c *cli.Command) error {
 					provider.CONFIG_PATH = c.String("config")
 
-					_, err := wire.InitializeNotifyService(ctx)
+					notifySvc, err := wire.InitializeNotifyService(ctx)
 
 					if err != nil {
+						panic(err)
+					}
+
+					if err = notifySvc.Notifier.Notify(ctx); err != nil {
 						panic(err)
 					}
 

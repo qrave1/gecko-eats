@@ -93,10 +93,10 @@ func ProvideSQLXConnection(cfg *config.Config) (*sqlx.DB, error) {
 	
 	CREATE TABLE IF NOT EXISTS feedings
 	(
-		id        INTEGER PRIMARY KEY AUTOINCREMENT,
-		date      VARCHAR(10)  NOT NULL UNIQUE,
+		date      VARCHAR(10)  NOT NULL,
 		pet_id    VARCHAR(36)  NOT NULL,
-		food_type VARCHAR(255) NOT NULL
+		food_type VARCHAR(255) NOT NULL,
+		PRIMARY KEY (date, pet_id)
 	);
 `,
 	)
