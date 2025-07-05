@@ -35,7 +35,7 @@ func (n *NotifyUsecase) Notify(_ context.Context, userIDs []int64) error {
 
 	messageBuilder.WriteString(fmt.Sprintf("📅 Кормление на %s:\n", date))
 
-	feeds, err := n.repo.feedsByDate(date)
+	feeds, err := n.repo.FeedsByDate(date)
 
 	if err != nil {
 		return fmt.Errorf("get feeds: %w", err)
@@ -52,7 +52,7 @@ func (n *NotifyUsecase) Notify(_ context.Context, userIDs []int64) error {
 
 		for _, p := range geckos {
 			if p.ID == feed.GeckoID {
-				gecko = &p
+				gecko = p
 
 				break
 			}

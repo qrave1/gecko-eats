@@ -26,13 +26,13 @@ func (u *FeedUsecase) Create(geckoID, date, foodType string) error {
 }
 
 func (u *FeedUsecase) GetByGeckoID(geckoID string) ([]*sql.Feed, error) {
-	return u.repo.FeedsByGeckoID(geckoID, 0)
+	return u.repo.FeedsByGeckoID(geckoID, 100)
 }
 
 func (u *FeedUsecase) GetByDate(date string) ([]*sql.Feed, error) {
 	return u.repo.FeedsByDate(date)
 }
 
-func (u *FeedUsecase) Delete(geckoID string) error {
+func (u *FeedUsecase) DeleteAll(geckoID string) error {
 	return u.repo.ClearFeed(geckoID)
 }

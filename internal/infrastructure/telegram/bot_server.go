@@ -13,14 +13,14 @@ import (
 type BotServer struct {
 	bot *tele.Bot
 
-	geckoUsecase usecase.GeckoUsecase
-	feedUsecase  usecase.FeedUsecase
+	geckoUsecase *usecase.GeckoUsecase
+	feedUsecase  *usecase.FeedUsecase
 }
 
 func NewBotServer(
 	bot *tele.Bot,
-	geckoUsecase usecase.GeckoUsecase,
-	feedUsecase usecase.FeedUsecase,
+	geckoUsecase *usecase.GeckoUsecase,
+	feedUsecase *usecase.FeedUsecase,
 	whitelist []int64,
 ) (*BotServer, error) {
 	botServer := &BotServer{

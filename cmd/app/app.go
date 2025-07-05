@@ -49,7 +49,11 @@ func NewApp(configPath string) (*App, error) {
 	}
 
 	// Create repository
-	repo := repository.NewSqlxRepository(db, cfg.Bot.Whitelist)
+	repo := repository.NewSqlxRepository(db)
+
+	geckoUsecase := usecase.NewGeckoUsecase(repo)
+
+	feedUsecase := usecase.NewFeedUsecase(repo)
 
 	// Create Telegram bot
 	bot, err := createTelegramBot(cfg)
@@ -58,7 +62,7 @@ func NewApp(configPath string) (*App, error) {
 	}
 
 	// Create bot server
-	botServer, err := telegram.NewBotServer(bot, repo, cfg.Bot.Whitelist)
+	botServer, err := telegram.NewBotServer(bot, geckoUsecase, feedUsecase, cfg.Bot.Whitelist)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +126,8 @@ func createDBConnection(cfg *config.Config) (*sqlx.DB, error) {
 	}
 
 	// Create tables if they don't exist
-	conn.Exec(`
+	conn.Exec(
+		`
 	CREATE TABLE IF NOT EXISTS geckos
 	(
 		id         VARCHAR(36)  PRIMARY KEY,
@@ -137,7 +142,8 @@ func createDBConnection(cfg *config.Config) (*sqlx.DB, error) {
 		food_type VARCHAR(255) NOT NULL,
 		PRIMARY KEY (gecko_id, date)
 	);
-	`)
+	`,
+	)
 
 	return conn, nil
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/qrave1/gecko-eats/internal/infrastructure/sql"
 	tele "gopkg.in/telebot.v4"
 )
 
@@ -17,72 +16,88 @@ func (b *BotServer) registerHandlers() {
 		menu.Row(btnViewGeckos, btnAddGecko, btnAddfeed),
 	)
 
-	b.bot.Handle("/start", func(c tele.Context) error {
-		return c.Send("Главное меню:", menu)
-	})
+	b.bot.Handle(
+		"/start", func(c tele.Context) error {
+			return c.Send("Главное меню:", menu)
+		},
+	)
 
 	// показать список питомцев
 	b.bot.Handle(&btnViewGeckos, b.geckoListHandler)
 
-	b.bot.Handle(&btnAddGecko, func(c tele.Context) error {
-		return c.Edit("Введите имя питомца в ответ на это сообщение для добавления питомца", addGeckoMenu)
-	})
+	b.bot.Handle(
+		&btnAddGecko, func(c tele.Context) error {
+			return c.Edit("Введите имя питомца в ответ на это сообщение для добавления питомца", addGeckoMenu)
+		},
+	)
 
-	b.bot.Handle(&btnAddfeed, func(c tele.Context) error {
-		return c.Edit("Введите имя питомца и интервал кормления в формате: <имя> <интервал>", addGeckoMenu)
-	})
+	b.bot.Handle(
+		&btnAddfeed, func(c tele.Context) error {
+			return c.Edit("Введите имя питомца и интервал кормления в формате: <имя> <интервал>", addGeckoMenu)
+		},
+	)
 
-	b.bot.Handle(tele.OnText, func(c tele.Context) error {
-		if c.Message().IsReply() {
-			originalMsg := c.Message().ReplyTo.Text
+	b.bot.Handle(
+		tele.OnText, func(c tele.Context) error {
+			if c.Message().IsReply() {
+				originalMsg := c.Message().ReplyTo.Text
 
-			if strings.Contains(originalMsg, "Введите имя питомца в ответ на это сообщение для добавления питомца") {
-				return b.newGecko(c)
-			} else if strings.Contains(originalMsg, "Введите имя питомца и интервал кормления в формате: <имя> <интервал>") {
-				return b.newfeed(c)
+				if strings.Contains(
+					originalMsg,
+					"Введите имя питомца в ответ на это сообщение для добавления питомца",
+				) {
+					return b.newGeckoHandler(c)
+				} else if strings.Contains(
+					originalMsg,
+					"Введите имя питомца и интервал кормления в формате: <имя> <интервал>",
+				) {
+					return b.newfeed(c)
+				}
+			} else {
+				// если не в ответ на сообщение, то просто игнорируем
+				slog.Info("Получено сообщение без ответа", "text", c.Text())
+
+				return c.Send("Пожалуйста, ответьте на сообщение для добавления питомца или расписания")
 			}
-		} else {
-			// если не в ответ на сообщение, то просто игнорируем
-			slog.Info("Получено сообщение без ответа", "text", c.Text())
 
-			return c.Send("Пожалуйста, ответьте на сообщение для добавления питомца или расписания")
-		}
-
-		return nil
-	})
+			return nil
+		},
+	)
 
 	// при выборе питомца — показать расписание
-	b.bot.Handle(tele.OnCallback, func(c tele.Context) error {
-		geckoID := c.Callback().Data
+	b.bot.Handle(
+		tele.OnCallback, func(c tele.Context) error {
+			geckoID := c.Callback().Data
 
-		geckoID = strings.TrimPrefix(geckoID, "\f")
+			geckoID = strings.TrimPrefix(geckoID, "\f")
 
-		gecko, err := b.repo.GeckoByID(geckoID)
+			gecko, err := b.geckoUsecase.GetByID(geckoID)
 
-		if err != nil {
-			slog.Error("Ошибка получения питомца", "error", err, "geckoID", geckoID)
+			if err != nil {
+				slog.Error("Ошибка получения питомца", "error", err, "geckoID", geckoID)
 
-			return c.Respond(&tele.CallbackResponse{Text: "Ошибка получения питомца"})
-		}
+				return c.Respond(&tele.CallbackResponse{Text: "Ошибка получения питомца"})
+			}
 
-		feeds, err := b.repo.feedsByPetID(gecko.ID, 100)
+			feeds, err := b.feedUsecase.GetByGeckoID(gecko.ID)
 
-		if err != nil {
-			slog.Error("Ошибка получения расписания", "error", err, "geckoID", geckoID)
+			if err != nil {
+				slog.Error("Ошибка получения расписания", "error", err, "geckoID", geckoID)
 
-			return c.Respond(&tele.CallbackResponse{Text: "Ошибка получения расписания"})
-		}
+				return c.Respond(&tele.CallbackResponse{Text: "Ошибка получения расписания"})
+			}
 
-		var answerBuilder strings.Builder
+			var answerBuilder strings.Builder
 
-		answerBuilder.WriteString(fmt.Sprintf("📅 Расписание для %s:\n", gecko.Name))
+			answerBuilder.WriteString(fmt.Sprintf("📅 Расписание для %s:\n", gecko.Name))
 
-		for _, f := range feeds {
-			answerBuilder.WriteString(fmt.Sprintf("• %s — %s\n", f.Date, f.FoodType))
-		}
+			for _, f := range feeds {
+				answerBuilder.WriteString(fmt.Sprintf("• %s — %s\n", f.Date, f.FoodType))
+			}
 
-		return c.Edit(answerBuilder.String())
-	})
+			return c.Edit(answerBuilder.String())
+		},
+	)
 }
 
 func (b *BotServer) newfeed(c tele.Context) error {
@@ -95,7 +110,7 @@ func (b *BotServer) newfeed(c tele.Context) error {
 		)
 	}
 
-	gecko, err := b.repo.GeckoByName(parts[0])
+	gecko, err := b.geckoUsecase.GetByName(parts[0])
 
 	if err != nil {
 		slog.Error(
@@ -119,10 +134,13 @@ func (b *BotServer) newfeed(c tele.Context) error {
 			"food_cycle", gecko.FoodCycle,
 		)
 
-		return c.Send("Ошибка при обработке расписания кормления: "+err.Error(), &tele.SendOptions{ReplyTo: c.Message()})
+		return c.Send(
+			"Ошибка при обработке расписания кормления: "+err.Error(),
+			&tele.SendOptions{ReplyTo: c.Message()},
+		)
 	}
 
-	err = b.repo.Clearfeeds(gecko.ID)
+	err = b.feedUsecase.DeleteAll(gecko.ID)
 
 	if err != nil {
 		slog.Error("Ошибка очистки кормлений", "error", err, "geckoID", gecko.ID)
@@ -184,7 +202,7 @@ func (b *BotServer) generatefeedSchedule(
 		// Вечернее кормление (18:00)
 		event := time.Date(d.Year(), d.Month(), d.Day(), 18, 0, 0, 0, d.Location())
 
-		err := b.repo.Addfeed(geckoID, event.Format("2006-01-02"), geckoCycle[lastFoodIx])
+		err := b.feedUsecase.Create(geckoID, event.Format("2006-01-02"), geckoCycle[lastFoodIx])
 
 		if err != nil {
 			slog.Error(

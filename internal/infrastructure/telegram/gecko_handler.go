@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -23,9 +24,7 @@ func (b *BotServer) geckoListHandler(c tele.Context) error {
 }
 
 func (b *BotServer) newGeckoHandler(c tele.Context) error {
-	gecko := sql.NewGecko(strings.Split(c.Message().Text, " ")[0])
-
-	err := b.repo.AddGecko(gecko)
+	gecko, err := b.geckoUsecase.Create(strings.Split(c.Message().Text, " ")[0])
 
 	if err != nil {
 		slog.Error("Ошибка добавления питомца", "error", err)
@@ -33,7 +32,7 @@ func (b *BotServer) newGeckoHandler(c tele.Context) error {
 		return c.Send("Ошибка добавления питомца", &tele.SendOptions{ReplyTo: c.Message()})
 	}
 
-	err = c.Send("Питомец добавлен!", &tele.SendOptions{ReplyTo: c.Message()})
+	err = c.Send(fmt.Sprintf("Питомец %s добавлен!", gecko.Name), &tele.SendOptions{ReplyTo: c.Message()})
 
 	if err != nil {
 		slog.Error("Ошибка отправки сообщения", "error", err)
