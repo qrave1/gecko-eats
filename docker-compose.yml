@@ -1,6 +1,6 @@
 services:
   gecko-eats:
-    image: docker.io/qrave1/gecko-eats:build_2025_06_30_13_06_23
+    image: docker.io/qrave1/gecko-eats:latest
     container_name: gecko-eats
     restart: unless-stopped
     networks:
