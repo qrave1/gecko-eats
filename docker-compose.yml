@@ -1,7 +1,0 @@
-services:
-  gecko-eats:
-    image: docker.io/qrave1/gecko-eats:latest
-    container_name: gecko-eats
-    restart: unless-stopped
-    networks:
-      - default

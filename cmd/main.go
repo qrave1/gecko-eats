@@ -7,7 +7,6 @@ import (
 	"syscall"
 
 	"github.com/qrave1/gecko-eats/cmd/app"
-	"github.com/qrave1/gecko-eats/internal/infrastructure/sql"
 	"github.com/urfave/cli/v3"
 )
 
@@ -17,21 +16,13 @@ func main() {
 	cliApp := &cli.Command{
 		Name:  "gecko-feeder",
 		Usage: "bot for feed geckos",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:    "config",
-				Aliases: []string{"c"},
-				Value:   "config.yaml",
-				Usage:   "path to YAML config file",
-			},
-		},
 		Commands: []*cli.Command{
 			{
 				Name:  "notify",
 				Usage: "cron job to notify about today's feeds",
 				Action: func(ctx context.Context, c *cli.Command) error {
 					// Initialize the application
-					application, err := app.NewApp(c.String("config"))
+					application, err := app.NewApp()
 					if err != nil {
 						panic(err)
 					}
@@ -44,17 +35,10 @@ func main() {
 					return nil
 				},
 			},
-			{
-				Name:  "migrate",
-				Usage: "run SQL database migrations",
-				Action: func(ctx context.Context, c *cli.Command) error {
-					return sql.RunMigrations(c.String("config"))
-				},
-			},
 		},
 		Action: func(ctx context.Context, c *cli.Command) error {
 			// Initialize the application
-			application, err := app.NewApp(c.String("config"))
+			application, err := app.NewApp()
 			if err != nil {
 				panic(err)
 			}

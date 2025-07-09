@@ -40,12 +40,18 @@ func NewBotServer(
 func (b *BotServer) Start(ctx context.Context) {
 	go b.bot.Start()
 
-	slog.Info("bot started", "username", b.bot.Me.Username)
+	slog.Info(
+		"bot started",
+		slog.Any("username", b.bot.Me.Username),
+	)
 
 	select {
 	case <-ctx.Done():
 		b.bot.Stop()
 
-		slog.Info("bot stopped", "username", b.bot.Me.Username)
+		slog.Info(
+			"bot stopped",
+			slog.Any("username", b.bot.Me.Username),
+		)
 	}
 }

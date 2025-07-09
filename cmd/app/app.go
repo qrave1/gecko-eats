@@ -2,17 +2,18 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/qrave1/gecko-eats/internal/config"
+	"github.com/qrave1/gecko-eats/cmd/config"
 	"github.com/qrave1/gecko-eats/internal/infrastructure/telegram"
 	"github.com/qrave1/gecko-eats/internal/repository"
 	"github.com/qrave1/gecko-eats/internal/usecase"
 
-	_ "github.com/glebarez/sqlite"
+	_ "github.com/lib/pq"
 	tele "gopkg.in/telebot.v4"
 )
 
@@ -29,9 +30,9 @@ type App struct {
 }
 
 // NewApp creates a new application instance with all dependencies
-func NewApp(configPath string) (*App, error) {
+func NewApp() (*App, error) {
 	// Create config
-	cfg, err := config.New(configPath)
+	cfg, err := config.New()
 	if err != nil {
 		return nil, err
 	}
@@ -39,11 +40,8 @@ func NewApp(configPath string) (*App, error) {
 	// Create logger
 	logger := createLogger()
 
-	// Log startup
-	logger.Info("starting application with config", slog.Any("config_path", configPath))
-
 	// Create database connection
-	db, err := createDBConnection(cfg)
+	db, err := createPostgresConnection(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -88,10 +86,8 @@ func (a *App) StartBot(ctx context.Context) {
 
 // RunNotifier runs the notification process once
 func (a *App) RunNotifier(ctx context.Context) error {
-	return a.NotifyUsecase.Notify(ctx, a.Config.Bot.NotifyUserIDs)
+	return a.NotifyUsecase.Notify(ctx, a.Config.Bot.NotifyUsers)
 }
-
-// Helper functions
 
 func createLogger() *slog.Logger {
 	level := slog.LevelInfo
@@ -119,30 +115,31 @@ func createLogger() *slog.Logger {
 	return logger
 }
 
-func createDBConnection(cfg *config.Config) (*sqlx.DB, error) {
-	conn, err := sqlx.Open("sqlite", cfg.Database.Path)
+func createPostgresConnection(cfg *config.Config) (*sqlx.DB, error) {
+	dsn := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		cfg.Database.Host,
+		cfg.Database.Port,
+		cfg.Database.User,
+		cfg.Database.Password,
+		cfg.Database.Name,
+		cfg.Database.SSL,
+	)
+
+	conn, err := sqlx.Open("postgres", dsn)
+
 	if err != nil {
 		return nil, err
 	}
 
-	// Create tables if they don't exist
-	conn.Exec(
-		`
-	CREATE TABLE IF NOT EXISTS geckos
-	(
-		id         VARCHAR(36)  PRIMARY KEY,
-		name       VARCHAR(255) NOT NULL UNIQUE,
-		food_cycle VARCHAR(255)
-	);
-	
-	CREATE TABLE IF NOT EXISTS feeds
-	(
-		date      VARCHAR(10)  NOT NULL,
-		gecko_id    VARCHAR(36)  NOT NULL,
-		food_type VARCHAR(255) NOT NULL,
-		PRIMARY KEY (gecko_id, date)
-	);
-	`,
+	// Check connection
+	if err = conn.Ping(); err != nil {
+		return nil, err
+	}
+
+	slog.Info(
+		"open Postgres connection",
+		slog.Any("DSN", dsn),
 	)
 
 	return conn, nil
