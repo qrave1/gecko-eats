@@ -1,22 +1,59 @@
-# Название образа и путь до registry
+# Конфигурация
 DOCKERFILE=deploy/Dockerfile
 DOCKER_COMPOSE_FILE=deploy/docker-compose.yml
 REGISTRY=qrave1/gecko-eats
-TAG=build_$(shell date '+%Y_%m_%d_%H_%M_%S')
+TAG=$(shell git rev-parse --short HEAD)
 
-.PHONY: build push run latest
+# Переменные среды (пригодятся в CI)
+export DOCKERFILE
+export DOCKER_COMPOSE_FILE
+export REGISTRY
+export TAG
 
-# Сборка образа
+.PHONY: build push latest deploy rollback
+
+## Сборка образа
 build:
-	@docker build --file $(DOCKERFILE) -t $(REGISTRY):$(TAG) .
+	@echo "Building Docker image with tag $(TAG)..."
+	docker build --file $(DOCKERFILE) -t $(REGISTRY):$(TAG) .
 
+## Публикация образа
 push:
-	@docker push $(REGISTRY):$(TAG)
+	@echo "Pushing Docker image $(REGISTRY):$(TAG)..."
+	docker push $(REGISTRY):$(TAG)
 
 latest:
 	@echo "Building and pushing latest image..."
-	@docker build --file $(DOCKERFILE) -t $(REGISTRY):latest .
-	@docker push $(REGISTRY):latest
+	docker build --file $(DOCKERFILE) -t $(REGISTRY):latest .
+	docker push $(REGISTRY):latest
 
-run_infra:
-	@docker compose --file $(DOCKER_COMPOSE_FILE) --profile infra up -d --remove-orphans
+## Деплой на сервер (нужен SSH доступ)
+deploy:
+	@echo "Deploying version $(TAG) to server..."
+	ssh $${VPS_USER}@$${VPS_HOST} "\
+		set -e;\
+		docker login -u '$${DOCKER_USERNAME}' -p '$${DOCKER_PASSWORD}';\
+		cd /path/to/your/app;\
+		echo 'Saving current version...';\
+		echo \$$(docker ps --filter 'name=myapp' --format '{{.Image}}') > .last_version;\
+		docker pull $(REGISTRY):$(TAG);\
+		docker compose --file $(DOCKER_COMPOSE_FILE) down;\
+		docker compose --file $(DOCKER_COMPOSE_FILE) up -d --remove-orphans;\
+	"
+
+## Rollback до предыдущей версии
+rollback:
+	@echo "Rolling back to previous version..."
+	ssh $${VPS_USER}@$${VPS_HOST} "\
+		set -e;\
+		cd /path/to/your/app;\
+		if [ -f .last_version ]; then\
+			OLD_IMAGE=$$(cat .last_version);\
+			echo 'Rolling back to $$OLD_IMAGE';\
+			docker pull $$OLD_IMAGE || true;\
+			docker compose --file $(DOCKER_COMPOSE_FILE) down;\
+			docker run -d --restart=always --name myapp $$OLD_IMAGE;\
+		else\
+			echo 'No previous version found for rollback.';\
+		fi;\
+	"
