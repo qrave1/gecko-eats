@@ -1,4 +1,6 @@
 # Название образа и путь до registry
+DOCKERFILE=deploy/Dockerfile
+DOCKER_COMPOSE_FILE=deploy/docker-compose.yml
 REGISTRY=qrave1/gecko-eats
 TAG=build_$(shell date '+%Y_%m_%d_%H_%M_%S')
 
@@ -6,15 +8,15 @@ TAG=build_$(shell date '+%Y_%m_%d_%H_%M_%S')
 
 # Сборка образа
 build:
-	@docker build -t $(REGISTRY):$(TAG) .
+	@docker build --file $(DOCKERFILE) -t $(REGISTRY):$(TAG) .
 
 push:
 	@docker push $(REGISTRY):$(TAG)
 
 latest:
 	@echo "Building and pushing latest image..."
-	@docker build -t $(REGISTRY):latest .
+	@docker build --file $(DOCKERFILE) -t $(REGISTRY):latest .
 	@docker push $(REGISTRY):latest
 
-run:
-	@docker compose up --build
+run_infra:
+	@docker compose --file $(DOCKER_COMPOSE_FILE) --profile infra up -d --remove-orphans

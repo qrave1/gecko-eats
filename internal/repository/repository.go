@@ -40,7 +40,7 @@ func (r *SqlxRepository) Geckos() ([]*sql.Gecko, error) {
 func (r *SqlxRepository) GeckoByName(name string) (*sql.Gecko, error) {
 	var gecko sql.Gecko
 
-	err := r.db.Get(&gecko, "SELECT * FROM geckos WHERE name = ?", name)
+	err := r.db.Get(&gecko, "SELECT * FROM geckos WHERE name = $1", name)
 
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (r *SqlxRepository) GeckoByName(name string) (*sql.Gecko, error) {
 func (r *SqlxRepository) GeckoByID(ID string) (*sql.Gecko, error) {
 	var gecko sql.Gecko
 
-	err := r.db.Get(&gecko, "SELECT * FROM geckos WHERE id = ?", ID)
+	err := r.db.Get(&gecko, "SELECT * FROM geckos WHERE id = $1", ID)
 
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (r *SqlxRepository) GeckoByID(ID string) (*sql.Gecko, error) {
 }
 
 func (r *SqlxRepository) AddGecko(gecko *sql.Gecko) error {
-	_, err := r.db.Exec("INSERT INTO geckos (id, name, food_cycle) VALUES (?, ?, ?)", gecko.ID, gecko.Name, gecko.FoodCycle)
+	_, err := r.db.Exec("INSERT INTO geckos (id, name, food_cycle) VALUES ($1, $2, $3)", gecko.ID, gecko.Name, gecko.FoodCycle)
 
 	if err != nil {
 		return err
@@ -78,9 +78,9 @@ func (r *SqlxRepository) FeedsByGeckoID(geckoID string, limit int) ([]*sql.Feed,
 		&list,
 		`
 			SELECT * FROM feeds
-			WHERE gecko_id = ?
+			WHERE gecko_id = $1
 			ORDER BY date ASC
-			LIMIT ?
+			LIMIT $2
 				`,
 		geckoID,
 		limit,
@@ -96,7 +96,7 @@ func (r *SqlxRepository) FeedsByDate(date string) ([]*sql.Feed, error) {
 		&list,
 		`
 			SELECT * FROM feeds
-			WHERE date = ?
+			WHERE date = $1
 			ORDER BY gecko_id ASC
 				`,
 		date,
@@ -107,7 +107,7 @@ func (r *SqlxRepository) FeedsByDate(date string) ([]*sql.Feed, error) {
 
 func (r *SqlxRepository) AddFeed(feed *sql.Feed) error {
 	_, err := r.db.Exec(
-		"INSERT INTO feeds (gecko_id, date, food_type) VALUES (?, ?, ?)",
+		"INSERT INTO feeds (gecko_id, date, food_type) VALUES ($1, $2, $3)",
 		feed.GeckoID,
 		feed.Date,
 		feed.FoodType,
@@ -121,7 +121,7 @@ func (r *SqlxRepository) AddFeed(feed *sql.Feed) error {
 }
 
 func (r *SqlxRepository) ClearFeed(geckoID string) error {
-	_, err := r.db.Exec("DELETE FROM feeds WHERE gecko_id = ?", geckoID)
+	_, err := r.db.Exec("DELETE FROM feeds WHERE gecko_id = $1", geckoID)
 
 	if err != nil {
 		return err

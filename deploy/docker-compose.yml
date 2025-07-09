@@ -1,0 +1,29 @@
+services:
+  bot:
+    image: docker.io/qrave1/gecko-eats:latest
+    profiles: [ bot ]
+    container_name: gecko-eats-bot
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    networks:
+      - default
+
+  postgres:
+    image: postgres:17-alpine
+    profiles: [ infra ]
+    container_name: gecko-eats-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=gecko
+      - POSTGRES_PASSWORD=gecko
+      - POSTGRES_DB=gecko_eats
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - default
+
+volumes:
+  postgres_data:

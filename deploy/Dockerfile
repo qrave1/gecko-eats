@@ -6,10 +6,10 @@ WORKDIR /app
 # Установим зависимости и подготовим окружение
 RUN apk add --no-cache git gcc musl-dev
 
-COPY go.mod go.sum ./
+COPY ../go.mod go.sum ./
 RUN go mod download
 
-COPY . .
+COPY .. .
 
 # Встроим миграции в бинарь, если используешь embed
 RUN CGO_ENABLED=0 go build -o gecko-eats ./cmd/main.go
@@ -19,9 +19,8 @@ FROM alpine:latest
 
 WORKDIR /app
 
-# Копируем бинарник и конфиги
+# Копируем бинарник
 COPY --from=builder /app/gecko-eats .
-COPY config.yaml .
 
 # (опционально) открываем порт, если нужно
 # EXPOSE 8080
