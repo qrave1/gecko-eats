@@ -1,4 +1,4 @@
-package sql
+package postgres
 
 type Gecko struct {
 	ID        string `db:"id"`

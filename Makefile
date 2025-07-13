@@ -10,7 +10,11 @@ export DOCKER_COMPOSE_FILE
 export REGISTRY
 export TAG
 
-.PHONY: build push latest deploy rollback
+.PHONY: build push
+
+## Создание миграции
+migrate-create:
+	@goose -dir internal/infrastructure/postgres/migrations create 1 sql
 
 ## Сборка образа
 build:
@@ -22,8 +26,3 @@ push:
 	@echo "Pushing Docker image $(REGISTRY):$(TAG)"
 	docker build --file $(DOCKERFILE) -t $(REGISTRY):$(TAG) .
 	docker push $(REGISTRY):$(TAG)
-
-latest:
-	@echo "Building and pushing latest image..."
-	docker build --file $(DOCKERFILE) -t $(REGISTRY):latest .
-	docker push $(REGISTRY):latest

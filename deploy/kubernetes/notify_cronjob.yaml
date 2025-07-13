@@ -11,7 +11,7 @@ spec:
         spec:
           containers:
             - name: notify
-              image: docker.io/qrave1/gecko-eats:b771a82
+              image: docker.io/qrave1/gecko-eats:a649bc5
               imagePullPolicy: IfNotPresent
               resources:
                 requests:

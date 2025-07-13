@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	"github.com/qrave1/gecko-eats/internal/infrastructure/sql"
+	"github.com/qrave1/gecko-eats/internal/infrastructure/postgres"
 	"github.com/qrave1/gecko-eats/internal/repository"
 )
 
@@ -17,7 +17,7 @@ func NewFeedUsecase(repo repository.Repository) *FeedUsecase {
 
 func (u *FeedUsecase) Create(geckoID, date, foodType string) error {
 	return u.repo.AddFeed(
-		&sql.Feed{
+		&postgres.Feed{
 			GeckoID:  geckoID,
 			Date:     date,
 			FoodType: foodType,
@@ -25,11 +25,11 @@ func (u *FeedUsecase) Create(geckoID, date, foodType string) error {
 	)
 }
 
-func (u *FeedUsecase) GetByGeckoID(geckoID string) ([]*sql.Feed, error) {
+func (u *FeedUsecase) GetByGeckoID(geckoID string) ([]*postgres.Feed, error) {
 	return u.repo.FeedsByGeckoID(geckoID, 100)
 }
 
-func (u *FeedUsecase) GetByDate(date string) ([]*sql.Feed, error) {
+func (u *FeedUsecase) GetByDate(date string) ([]*postgres.Feed, error) {
 	return u.repo.FeedsByDate(date)
 }
 

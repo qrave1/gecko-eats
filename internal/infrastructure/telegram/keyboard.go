@@ -1,7 +1,7 @@
 package telegram
 
 import (
-	"github.com/qrave1/gecko-eats/internal/infrastructure/sql"
+	"github.com/qrave1/gecko-eats/internal/infrastructure/postgres"
 	tele "gopkg.in/telebot.v4"
 )
 
@@ -16,7 +16,7 @@ var (
 
 // TODO: клавиатура с возвратом на главное меню
 
-func createGeckosKeyboard(geckos []*sql.Gecko) *tele.ReplyMarkup {
+func createGeckosKeyboard(geckos []*postgres.Gecko) *tele.ReplyMarkup {
 	geckoSelector := &tele.ReplyMarkup{ResizeKeyboard: true}
 
 	var rows []tele.Row

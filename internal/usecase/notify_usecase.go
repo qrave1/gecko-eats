@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/qrave1/gecko-eats/internal/infrastructure/sql"
+	"github.com/qrave1/gecko-eats/internal/infrastructure/postgres"
 	"github.com/qrave1/gecko-eats/internal/repository"
 	tele "gopkg.in/telebot.v4"
 )
@@ -48,7 +48,7 @@ func (n *NotifyUsecase) Notify(_ context.Context, userIDs []int64) error {
 	}
 
 	for _, feed := range feeds {
-		var gecko *sql.Gecko
+		var gecko *postgres.Gecko
 
 		for _, p := range geckos {
 			if p.ID == feed.GeckoID {

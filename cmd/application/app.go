@@ -42,7 +42,7 @@ func NewApp(ctx context.Context) (*App, error) {
 	logger := createLogger()
 
 	// Create database connection
-	db, err := createPostgresConnection(ctx, cfg)
+	db, err := NewPostgresConnection(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func createLogger() *slog.Logger {
 	return logger
 }
 
-func createPostgresConnection(ctx context.Context, cfg *config.Config) (*sqlx.DB, error) {
+func NewPostgresConnection(ctx context.Context, cfg *config.Config) (*sqlx.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Database.Host,

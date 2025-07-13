@@ -7,7 +7,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pressly/goose/v3"
 	"github.com/qrave1/gecko-eats/cmd/application"
+	"github.com/qrave1/gecko-eats/cmd/config"
+	"github.com/qrave1/gecko-eats/internal/infrastructure/postgres"
 	"github.com/urfave/cli/v3"
 )
 
@@ -30,6 +33,41 @@ func main() {
 
 					// Run the notifier
 					if err = application.RunNotifier(ctx); err != nil {
+						panic(err)
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:  "migrate",
+				Usage: "migrate database",
+				Action: func(ctx context.Context, c *cli.Command) error {
+					cfg, err := config.New()
+					if err != nil {
+						panic(err)
+					}
+
+					conn, err := application.NewPostgresConnection(ctx, cfg)
+					if err != nil {
+						panic(err)
+					}
+
+					goose.SetBaseFS(postgres.MigrationsEmbed)
+
+					err = goose.SetDialect(string(goose.DialectPostgres))
+					if err != nil {
+						panic(err)
+					}
+
+					err = goose.RunContext(
+						ctx,
+						c.Args().First(),
+						conn.DB,
+						"migrations",
+						c.Args().Slice()...,
+					)
+					if err != nil {
 						panic(err)
 					}
 
