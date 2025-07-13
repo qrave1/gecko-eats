@@ -4,7 +4,7 @@ metadata:
   name: notify
   namespace: gecko-eats
 spec:
-  schedule: "* 9,22 * * *"
+  schedule: "* * * * *"
   jobTemplate:
     spec:
       template:
@@ -15,9 +15,9 @@ spec:
               imagePullPolicy: IfNotPresent
               resources:
                 requests:
-                  memory: 10Mi`
+                  memory: "10Mi"
                 limits:
-                  memory: 300Mi
+                  memory: "300Mi"
               envFrom:
                 - configMapRef:
                     name: bot

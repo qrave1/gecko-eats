@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: bot-configmap
+  name: bot
   namespace: gecko-eats
 data:
   BOT_DEBUG: "false"

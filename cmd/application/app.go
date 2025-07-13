@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"time"
 
@@ -176,7 +177,22 @@ func createTelegramBot(cfg *config.Config) (*tele.Bot, error) {
 		tele.Settings{
 			Token:   cfg.Bot.Token,
 			Poller:  &tele.LongPoller{Timeout: 5 * time.Second},
-			Verbose: false,
+			Verbose: cfg.Bot.Debug,
+			OnError: func(err error, c tele.Context) {
+				slog.Error(
+					"error callback",
+					slog.Any("error", err),
+				)
+			},
+			Client: &http.Client{
+				Transport: &http.Transport{
+					MaxIdleConns:          100,
+					IdleConnTimeout:       90 * time.Second,
+					TLSHandshakeTimeout:   10 * time.Second,
+					ExpectContinueTimeout: 1 * time.Second,
+				},
+				Timeout: 30 * time.Second,
+			},
 		},
 	)
 }

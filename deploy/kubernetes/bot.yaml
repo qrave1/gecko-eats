@@ -1,15 +1,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gecko-eats-bot
+  name: bot
   namespace: gecko-eats
   labels:
-    app: gecko-eats-bot
+    app: bot
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: gecko-eats-bot
+      app: bot
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -17,9 +17,9 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      name: gecko-eats-bot
+      name: bot
       labels:
-        app: gecko-eats-bot
+        app: bot
     spec:
       containers:
         - name: bot
@@ -27,9 +27,9 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             requests:
-              memory: 10Mi`
+              memory: "10Mi"
             limits:
-              memory: 300Mi
+              memory: "300Mi"
           envFrom:
             - configMapRef:
                 name: bot
