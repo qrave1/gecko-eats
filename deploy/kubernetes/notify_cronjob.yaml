@@ -4,7 +4,7 @@ metadata:
   name: notify
   namespace: gecko-eats
 spec:
-  schedule: "* * * * *"
+  schedule: "* 9,22 * * *"
   jobTemplate:
     spec:
       template:
