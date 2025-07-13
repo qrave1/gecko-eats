@@ -5,8 +5,10 @@ metadata:
   namespace: gecko-eats
 spec:
   schedule: "* 9,22 * * *"
+  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
+      backoffLimit: 2
       template:
         spec:
           containers:
@@ -14,10 +16,8 @@ spec:
               image: docker.io/qrave1/gecko-eats:8249935
               imagePullPolicy: IfNotPresent
               resources:
-                requests:
-                  memory: "10Mi"
                 limits:
-                  memory: "300Mi"
+                  memory: "50Mi"
               envFrom:
                 - configMapRef:
                     name: bot
