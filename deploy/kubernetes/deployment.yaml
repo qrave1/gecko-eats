@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gecko-eats-bot
+  namespace: gecko-eats
+  labels:
+    app: gecko-eats-bot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gecko-eats-bot
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      name: gecko-eats-bot
+      labels:
+        app: gecko-eats-bot
+    spec:
+      containers:
+        - name: bot
+          image: docker.io/qrave1/gecko-eats:20e0bdd
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              memory: 10Mi`
+            limits:
+              memory: 300Mi
+          envFrom:
+            - configMapRef:
+                name: bot
+      restartPolicy: Always
+      

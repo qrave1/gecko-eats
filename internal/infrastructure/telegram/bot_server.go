@@ -37,21 +37,20 @@ func NewBotServer(
 	return botServer, nil
 }
 
-func (b *BotServer) Start(ctx context.Context) {
+func (b *BotServer) Start(_ context.Context) {
 	go b.bot.Start()
 
 	slog.Info(
-		"bot started",
+		"telebot started",
 		slog.Any("username", b.bot.Me.Username),
 	)
+}
 
-	select {
-	case <-ctx.Done():
-		b.bot.Stop()
+func (b *BotServer) Shutdown(_ context.Context) {
+	b.bot.Stop()
 
-		slog.Info(
-			"bot stopped",
-			slog.Any("username", b.bot.Me.Username),
-		)
-	}
+	slog.Info(
+		"telebot stopped",
+		slog.Any("username", b.bot.Me.Username),
+	)
 }

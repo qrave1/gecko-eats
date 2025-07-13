@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: notify
+  namespace: gecko-eats
+spec:
+  schedule: "* 9,22 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: notify
+              image: docker.io/qrave1/gecko-eats:20e0bdd
+              imagePullPolicy: IfNotPresent
+              resources:
+                requests:
+                  memory: 10Mi`
+                limits:
+                  memory: 300Mi
+              envFrom:
+                - configMapRef:
+                    name: bot
+              command:
+                - /app/build
+                - notify
+          restartPolicy: OnFailure

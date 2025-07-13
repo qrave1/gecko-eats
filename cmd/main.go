@@ -5,8 +5,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"github.com/qrave1/gecko-eats/cmd/app"
+	"github.com/qrave1/gecko-eats/cmd/application"
 	"github.com/urfave/cli/v3"
 )
 
@@ -22,7 +23,7 @@ func main() {
 				Usage: "cron job to notify about today's feeds",
 				Action: func(ctx context.Context, c *cli.Command) error {
 					// Initialize the application
-					application, err := app.NewApp()
+					application, err := application.NewApp(ctx)
 					if err != nil {
 						panic(err)
 					}
@@ -38,21 +39,27 @@ func main() {
 		},
 		Action: func(ctx context.Context, c *cli.Command) error {
 			// Initialize the application
-			application, err := app.NewApp()
+			app, err := application.NewApp(ctx)
 			if err != nil {
 				panic(err)
 			}
 
 			// Start the bot
-			application.StartBot(ctx)
+			err = app.Start(ctx)
+
+			if err != nil {
+				panic(err)
+			}
 
 			exit := make(chan os.Signal, 1)
 			signal.Notify(exit, syscall.SIGINT, syscall.SIGTERM)
+			<-exit
 
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-exit:
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+
+			if err = app.Shutdown(ctx); err != nil {
+				panic(err)
 			}
 
 			return nil

@@ -12,7 +12,7 @@ RUN go mod download
 COPY .. .
 
 # Встроим миграции в бинарь, если используешь embed
-RUN CGO_ENABLED=0 go build -o gecko-eats ./cmd/main.go
+RUN CGO_ENABLED=0 go build -o build ./cmd/main.go
 
 # финальный образ
 FROM alpine:latest
@@ -20,9 +20,6 @@ FROM alpine:latest
 WORKDIR /app
 
 # Копируем бинарник
-COPY --from=builder /app/gecko-eats .
+COPY --from=builder /app/build .
 
-# (опционально) открываем порт, если нужно
-# EXPOSE 8080
-
-ENTRYPOINT ["./gecko-eats"]
+ENTRYPOINT ["./build"]

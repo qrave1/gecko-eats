@@ -1,4 +1,4 @@
-package app
+package application
 
 import (
 	"context"
@@ -30,7 +30,7 @@ type App struct {
 }
 
 // NewApp creates a new application instance with all dependencies
-func NewApp() (*App, error) {
+func NewApp(ctx context.Context) (*App, error) {
 	// Create config
 	cfg, err := config.New()
 	if err != nil {
@@ -41,7 +41,7 @@ func NewApp() (*App, error) {
 	logger := createLogger()
 
 	// Create database connection
-	db, err := createPostgresConnection(cfg)
+	db, err := createPostgresConnection(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +79,25 @@ func NewApp() (*App, error) {
 	}, nil
 }
 
-// StartBot starts the Telegram bot server
-func (a *App) StartBot(ctx context.Context) {
+// Start starts the Telegram bot server
+func (a *App) Start(ctx context.Context) error {
+	slog.Info("starting application...")
+
 	a.BotServer.Start(ctx)
+
+	return nil
+}
+
+func (a *App) Shutdown(ctx context.Context) error {
+	slog.Info("shutting down...")
+
+	a.BotServer.Shutdown(ctx)
+
+	if err := a.DB.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // RunNotifier runs the notification process once
@@ -115,7 +131,7 @@ func createLogger() *slog.Logger {
 	return logger
 }
 
-func createPostgresConnection(cfg *config.Config) (*sqlx.DB, error) {
+func createPostgresConnection(ctx context.Context, cfg *config.Config) (*sqlx.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Database.Host,
@@ -133,13 +149,23 @@ func createPostgresConnection(cfg *config.Config) (*sqlx.DB, error) {
 	}
 
 	// Check connection
-	if err = conn.Ping(); err != nil {
-		return nil, err
+	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
+	defer cancel()
+
+	if err = conn.PingContext(ctx); err != nil {
+		slog.Error(
+			"unable to ping postgres connection",
+			slog.Any("error", err),
+		)
+
+		return nil, fmt.Errorf("postgres ping failed: %w", err)
 	}
 
 	slog.Info(
-		"open Postgres connection",
-		slog.Any("DSN", dsn),
+		"postgres connection opened",
+		slog.String("host", cfg.Database.Host),
+		slog.Int("port", cfg.Database.Port),
+		slog.String("dbname", cfg.Database.Name),
 	)
 
 	return conn, nil
