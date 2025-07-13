@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"github.com/google/uuid"
-	"github.com/qrave1/gecko-eats/internal/infrastructure/postgres"
+	"github.com/qrave1/gecko-eats/internal/domain"
 	"github.com/qrave1/gecko-eats/internal/repository"
 )
 
@@ -16,11 +16,11 @@ func NewGeckoUsecase(repo repository.Repository) *GeckoUsecase {
 	}
 }
 
-func (u *GeckoUsecase) Create(name string) (*postgres.Gecko, error) {
-	gecko := &postgres.Gecko{
+func (u *GeckoUsecase) Create(name string) (*domain.Gecko, error) {
+	gecko := &domain.Gecko{
 		ID:        uuid.New().String(),
 		Name:      name,
-		FoodCycle: `["Кальций", "Кальций", "Кальций","Витамины"]`,
+		FoodCycle: `["Кальций", "Кальций", "Кальций", "Витамины"]`,
 	}
 
 	if err := u.repo.AddGecko(gecko); err != nil {
@@ -30,14 +30,14 @@ func (u *GeckoUsecase) Create(name string) (*postgres.Gecko, error) {
 	return gecko, nil
 }
 
-func (u *GeckoUsecase) GetByID(geckoID string) (*postgres.Gecko, error) {
+func (u *GeckoUsecase) GetByID(geckoID string) (*domain.Gecko, error) {
 	return u.repo.GeckoByID(geckoID)
 }
 
-func (u *GeckoUsecase) GetByName(name string) (*postgres.Gecko, error) {
+func (u *GeckoUsecase) GetByName(name string) (*domain.Gecko, error) {
 	return u.repo.GeckoByName(name)
 }
 
-func (u *GeckoUsecase) GetAll() ([]*postgres.Gecko, error) {
+func (u *GeckoUsecase) GetAll() ([]*domain.Gecko, error) {
 	return u.repo.Geckos()
 }

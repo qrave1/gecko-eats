@@ -1,4 +1,4 @@
-package postgres
+package domain
 
 type Gecko struct {
 	ID        string `db:"id"`

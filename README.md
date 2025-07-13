@@ -1,7 +1,13 @@
-### cron command
+### Feature List
 
-```bash
-docker run --rm \
-  -v ./config/config.yaml:/app/config.yaml \
-  docker.io/qrave1/gecko-eats:latest notify -c /app/config.yaml
-```
+- [ ] Сделать UI полностью через inline
+- [ ] Добавить настройку гекконов
+- [ ] Добавить красивый календарь для вывода кормлений
+
+### TODO List
+
+- [ ] Написать тесты
+- [ ] Сделать CI/CD
+- [ ] Прикрутить брокер (nats)
+- [ ] Добавить метрики Prometheus + экспорт в графану
+- [ ]

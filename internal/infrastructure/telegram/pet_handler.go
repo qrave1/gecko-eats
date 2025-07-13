@@ -1,13 +1,13 @@
 package telegram
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/qrave1/gecko-eats/internal/domain/input"
 	tele "gopkg.in/telebot.v4"
 )
 
@@ -33,7 +33,10 @@ func (b *BotServer) registerHandlers() {
 
 	b.bot.Handle(
 		&btnAddfeed, func(c tele.Context) error {
-			return c.Edit("Введите имя питомца и интервал кормления в формате: <имя> <интервал>", addGeckoMenu)
+			return c.Edit(
+				"Введите имя питомца и интервал кормления в формате: <имя> <интервал> <дата начала> <индекс первого типа еды>",
+				addGeckoMenu,
+			)
 		},
 	)
 
@@ -49,7 +52,7 @@ func (b *BotServer) registerHandlers() {
 					return b.newGeckoHandler(c)
 				} else if strings.Contains(
 					originalMsg,
-					"Введите имя питомца и интервал кормления в формате: <имя> <интервал>",
+					"Введите имя питомца и интервал кормления в формате: <имя> <интервал> <дата начала> <индекс первого типа еды>",
 				) {
 					return b.newfeed(c)
 				}
@@ -101,128 +104,94 @@ func (b *BotServer) registerHandlers() {
 }
 
 func (b *BotServer) newfeed(c tele.Context) error {
+	var err error
 	parts := strings.Split(c.Text(), " ")
 
-	if len(parts) != 2 {
+	if len(parts) < 2 || len(parts) > 4 {
 		return c.Send(
-			"Неверный формат. Введите имя питомца и интервал кормления в формате: <имя> <интервал>",
+			"Неверный формат. Введите имя питомца и интервал кормления в формате: <имя> <интервал> <дата начала> <индекс первого типа еды>",
 			&tele.SendOptions{ReplyTo: c.Message()},
 		)
 	}
 
-	gecko, err := b.geckoUsecase.GetByName(parts[0])
+	createFeedingsInput := new(input.CreateFeedingsInput)
 
+	createFeedingsInput.Name = parts[0]
+
+	createFeedingsInput.Interval, err = strconv.Atoi(parts[1])
+	if err != nil {
+		slog.Error("Ошибка при преобразовании интервала кормления", "error", err, "interval", parts[1])
+
+		return c.Send(
+			"Неверный формат интервала. Введите число в формате: <имя> <интервал> <дата начала> <индекс первого типа еды>",
+			&tele.SendOptions{ReplyTo: c.Message()},
+		)
+	}
+
+	createFeedingsInput.StartDate = time.Now()
+
+	switch len(parts) {
+	case 2:
+	case 3:
+		createFeedingsInput.StartDate, err = time.Parse("02-01-2006", parts[2])
+		if err != nil {
+			slog.Error("Ошибка при преобразовании даты начала", "error", err)
+
+			return c.Send(
+				"Дата написана неправильно",
+				&tele.SendOptions{ReplyTo: c.Message()},
+			)
+		}
+	case 4:
+		createFeedingsInput.StartDate, err = time.Parse("02-01-2006", parts[2])
+		if err != nil {
+			slog.Error("Ошибка при преобразовании даты начала", "error", err)
+
+			return c.Send(
+				"Дата написана неправильно",
+				&tele.SendOptions{ReplyTo: c.Message()},
+			)
+		}
+
+		createFeedingsInput.StartIx, err = strconv.Atoi(parts[3])
+	default:
+		return c.Send(
+			"Неправильное количество параметров",
+			&tele.SendOptions{ReplyTo: c.Message()},
+		)
+	}
+
+	gecko, err := b.geckoUsecase.GetByName(createFeedingsInput.Name)
 	if err != nil {
 		slog.Error(
 			"create feed schedule: get gecko by name",
 			"error", err,
-			"geckoName", parts[0],
+			"geckoName", createFeedingsInput.Name,
 			"parts", parts,
 		)
 
 		return c.Send("Ошибка при получении питомца", &tele.SendOptions{ReplyTo: c.Message()})
 	}
 
-	var foodCycleJSON []string
-
-	err = json.Unmarshal([]byte(gecko.FoodCycle), &foodCycleJSON)
-
-	if err != nil {
-		slog.Error(
-			"create feed schedule: unmarshal food cycle",
-			"error", err,
-			"food_cycle", gecko.FoodCycle,
-		)
-
-		return c.Send(
-			"Ошибка при обработке расписания кормления: "+err.Error(),
-			&tele.SendOptions{ReplyTo: c.Message()},
-		)
-	}
-
 	err = b.feedUsecase.DeleteAll(gecko.ID)
-
 	if err != nil {
 		slog.Error("Ошибка очистки кормлений", "error", err, "geckoID", gecko.ID)
 
 		return c.Send("Ошибка при очистке кормлений", &tele.SendOptions{ReplyTo: c.Message()})
 	}
 
-	interval, err := strconv.Atoi(parts[1])
-
+	createdFeeds, err := b.feedUsecase.CreateSchedule(gecko, createFeedingsInput)
 	if err != nil {
-		slog.Error("Ошибка при преобразовании интервала кормления", "error", err, "interval", parts[1])
+		slog.Error("Ошибка создания расписания кормления", "error", err, "interval", parts[1])
 
 		return c.Send(
-			"Неверный формат интервала. Введите число в формате: <имя> <интервал>",
+			"Ошибка создания расписания кормления",
 			&tele.SendOptions{ReplyTo: c.Message()},
 		)
 	}
 
-	createdfeeds := b.generatefeedSchedule(time.Now(), gecko.ID, foodCycleJSON, interval)
-
 	return c.Send(
-		fmt.Sprintf("Расписание кормления создано: %d кормлений", createdfeeds),
+		fmt.Sprintf("Расписание кормления создано: %d кормлений", createdFeeds),
 		&tele.SendOptions{ReplyTo: c.Message()},
 	)
-}
-
-func (b *BotServer) generatefeedSchedule(
-	startDate time.Time,
-	geckoID string,
-	geckoCycle []string,
-	interval int,
-) (createdfeedsCount int) {
-	endDate := startDate.AddDate(0, 1, 0) // +1 месяц
-
-	lastFoodIx := 0
-
-	for d := startDate; d.Before(endDate); d = d.AddDate(0, 0, interval) {
-		// TODO: добавить проверку на корректность даты
-
-		// TODO: бред какой-то, мб позже понадобится
-		//for i, foodType := range geckoCycle {
-		//	parsedFoodType, err := time.Parse("2006-01-02", foodType)
-		//
-		//	if err != nil {
-		//		slog.Error("Ошибка при парсинге даты кормления", "error", err, "foodType", foodType)
-		//
-		//		continue // Пропускаем некорректные даты
-		//	}
-		//
-		//	if parsedFoodType.Year() == d.Year() &&
-		//		parsedFoodType.Month() == d.Month() &&
-		//		parsedFoodType.Day() == d.Day() {
-		//
-		//		lastIx = i
-		//		break
-		//	}
-		//}
-
-		// Вечернее кормление (18:00)
-		event := time.Date(d.Year(), d.Month(), d.Day(), 18, 0, 0, 0, d.Location())
-
-		err := b.feedUsecase.Create(geckoID, event.Format("2006-01-02"), geckoCycle[lastFoodIx])
-
-		if err != nil {
-			slog.Error(
-				"add feed",
-				slog.Any("error", err),
-				slog.String("gecko_id", geckoID),
-				slog.String("date", event.Format("2006-01-02")),
-				slog.String("food_type", geckoCycle[lastFoodIx]),
-			)
-		}
-
-		createdfeedsCount++
-
-		// счётчик для следующего типа еды
-		if lastFoodIx < len(geckoCycle)-1 {
-			lastFoodIx++
-		} else {
-			lastFoodIx = 0
-		}
-	}
-
-	return createdfeedsCount
 }

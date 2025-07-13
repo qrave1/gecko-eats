@@ -2,20 +2,20 @@ package repository
 
 import (
 	"github.com/jmoiron/sqlx"
-	"github.com/qrave1/gecko-eats/internal/infrastructure/postgres"
+	"github.com/qrave1/gecko-eats/internal/domain"
 )
 
 type Repository interface {
 	// Geckos section
-	Geckos() ([]*postgres.Gecko, error)
-	GeckoByID(id string) (*postgres.Gecko, error)
-	GeckoByName(name string) (*postgres.Gecko, error)
-	AddGecko(gecko *postgres.Gecko) error
+	Geckos() ([]*domain.Gecko, error)
+	GeckoByID(id string) (*domain.Gecko, error)
+	GeckoByName(name string) (*domain.Gecko, error)
+	AddGecko(gecko *domain.Gecko) error
 
 	// feeds section
-	FeedsByGeckoID(geckoID string, limit int) ([]*postgres.Feed, error)
-	FeedsByDate(date string) ([]*postgres.Feed, error)
-	AddFeed(feed *postgres.Feed) error
+	FeedsByGeckoID(geckoID string, limit int) ([]*domain.Feed, error)
+	FeedsByDate(date string) ([]*domain.Feed, error)
+	AddFeed(feed *domain.Feed) error
 	ClearFeed(geckoID string) error
 }
 
@@ -29,16 +29,16 @@ func NewSqlxRepository(db *sqlx.DB) *SqlxRepository {
 	return &SqlxRepository{db: db}
 }
 
-func (r *SqlxRepository) Geckos() ([]*postgres.Gecko, error) {
-	var geckos []*postgres.Gecko
+func (r *SqlxRepository) Geckos() ([]*domain.Gecko, error) {
+	var geckos []*domain.Gecko
 
 	err := r.db.Select(&geckos, "SELECT * FROM geckos ORDER BY name")
 
 	return geckos, err
 }
 
-func (r *SqlxRepository) GeckoByName(name string) (*postgres.Gecko, error) {
-	var gecko postgres.Gecko
+func (r *SqlxRepository) GeckoByName(name string) (*domain.Gecko, error) {
+	var gecko domain.Gecko
 
 	err := r.db.Get(&gecko, "SELECT * FROM geckos WHERE name = $1", name)
 
@@ -49,8 +49,8 @@ func (r *SqlxRepository) GeckoByName(name string) (*postgres.Gecko, error) {
 	return &gecko, nil
 }
 
-func (r *SqlxRepository) GeckoByID(ID string) (*postgres.Gecko, error) {
-	var gecko postgres.Gecko
+func (r *SqlxRepository) GeckoByID(ID string) (*domain.Gecko, error) {
+	var gecko domain.Gecko
 
 	err := r.db.Get(&gecko, "SELECT * FROM geckos WHERE id = $1", ID)
 
@@ -61,7 +61,7 @@ func (r *SqlxRepository) GeckoByID(ID string) (*postgres.Gecko, error) {
 	return &gecko, nil
 }
 
-func (r *SqlxRepository) AddGecko(gecko *postgres.Gecko) error {
+func (r *SqlxRepository) AddGecko(gecko *domain.Gecko) error {
 	_, err := r.db.Exec("INSERT INTO geckos (id, name, food_cycle) VALUES ($1, $2, $3)", gecko.ID, gecko.Name, gecko.FoodCycle)
 
 	if err != nil {
@@ -71,8 +71,8 @@ func (r *SqlxRepository) AddGecko(gecko *postgres.Gecko) error {
 	return nil
 }
 
-func (r *SqlxRepository) FeedsByGeckoID(geckoID string, limit int) ([]*postgres.Feed, error) {
-	var list []*postgres.Feed
+func (r *SqlxRepository) FeedsByGeckoID(geckoID string, limit int) ([]*domain.Feed, error) {
+	var list []*domain.Feed
 
 	err := r.db.Select(
 		&list,
@@ -89,8 +89,8 @@ func (r *SqlxRepository) FeedsByGeckoID(geckoID string, limit int) ([]*postgres.
 	return list, err
 }
 
-func (r *SqlxRepository) FeedsByDate(date string) ([]*postgres.Feed, error) {
-	var list []*postgres.Feed
+func (r *SqlxRepository) FeedsByDate(date string) ([]*domain.Feed, error) {
+	var list []*domain.Feed
 
 	err := r.db.Select(
 		&list,
@@ -105,7 +105,7 @@ func (r *SqlxRepository) FeedsByDate(date string) ([]*postgres.Feed, error) {
 	return list, err
 }
 
-func (r *SqlxRepository) AddFeed(feed *postgres.Feed) error {
+func (r *SqlxRepository) AddFeed(feed *domain.Feed) error {
 	_, err := r.db.Exec(
 		"INSERT INTO feeds (gecko_id, date, food_type) VALUES ($1, $2, $3)",
 		feed.GeckoID,

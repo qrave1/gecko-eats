@@ -14,7 +14,7 @@ export TAG
 
 ## Создание миграции
 migrate-create:
-	@goose -dir internal/infrastructure/postgres/migrations create 1 sql
+	@goose -dir internal/infrastructure/postgres/migrations create example sql
 
 ## Сборка образа
 build:
@@ -26,3 +26,7 @@ push:
 	@echo "Pushing Docker image $(REGISTRY):$(TAG)"
 	docker build --file $(DOCKERFILE) -t $(REGISTRY):$(TAG) .
 	docker push $(REGISTRY):$(TAG)
+
+infra:
+	@echo "Start dev environment"
+	@docker compose --file $(DOCKER_COMPOSE_FILE) --profile infra up
