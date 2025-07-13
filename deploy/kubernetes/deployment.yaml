@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: bot
-          image: docker.io/qrave1/gecko-eats:20e0bdd
+          image: docker.io/qrave1/gecko-eats:b771a82
           imagePullPolicy: IfNotPresent
           resources:
             requests:
