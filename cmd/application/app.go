@@ -14,7 +14,7 @@ import (
 	"github.com/qrave1/gecko-eats/internal/repository"
 	"github.com/qrave1/gecko-eats/internal/usecase"
 
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	tele "gopkg.in/telebot.v4"
 )
 
@@ -143,17 +143,18 @@ func NewPostgresConnection(ctx context.Context, cfg *config.Config) (*sqlx.DB, e
 		cfg.Database.SSL,
 	)
 
-	conn, err := sqlx.Open("postgres", dsn)
-
+	conn, err := sqlx.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check connection
-	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	if err = conn.PingContext(ctx); err != nil {
+	err = conn.PingContext(ctx)
+
+	if err != nil {
 		slog.Error(
 			"unable to ping postgres connection",
 			slog.Any("error", err),

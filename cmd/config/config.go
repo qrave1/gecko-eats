@@ -19,6 +19,8 @@ type Bot struct {
 }
 
 type Database struct {
+	URL string `env:"DB_URL"`
+	// Либо URL, либо DSN по частям
 	Host     string `env:"DB_HOST"`
 	Port     int    `env:"DB_PORT"`
 	User     string `env:"DB_USER"`

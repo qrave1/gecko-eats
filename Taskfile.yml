@@ -1,0 +1,33 @@
+version: "3"
+
+vars:
+  DOCKERFILE: deploy/Dockerfile
+  DOCKER_COMPOSE_FILE: deploy/devolopment/docker-compose.yml
+  REGISTRY: "ghcr.io/qrave1/gecko-eats"
+  BUILD_TIMESTAMP:
+    sh: date +%Y_%m_%d_%H_%M_%S
+
+tasks:
+  migrate-create:
+    desc: "Создание миграции"
+    cmds:
+      - goose -dir internal/infrastructure/postgres/migrations create example sql
+
+  build:
+    desc: Build Docker image with timestamp tag
+    cmds:
+      - docker build -f {{.DOCKERFILE}} -t {{.REGISTRY}}:{{.BUILD_TIMESTAMP}} .
+      - docker tag {{.REGISTRY}}:{{.BUILD_TIMESTAMP}} {{.REGISTRY}}:latest
+
+  push:
+    desc: Build and push Docker image to registry
+    deps: [ build ]
+    cmds:
+      - docker push {{.REGISTRY}}:{{.BUILD_TIMESTAMP}}
+      - docker push {{.REGISTRY}}:latest
+
+  infra:
+    desc: "Запуск dev-окружения"
+    cmds:
+      - echo "Start dev environment"
+      - docker compose --file {{.DOCKER_COMPOSE_FILE}} --profile infra up

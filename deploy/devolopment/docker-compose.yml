@@ -1,14 +1,4 @@
 services:
-  bot:
-    image: docker.io/qrave1/gecko-eats:latest
-    profiles: [ bot ]
-    container_name: gecko-eats-bot
-    restart: unless-stopped
-    depends_on:
-      - postgres
-    networks:
-      - default
-
   postgres:
     image: postgres:17-alpine
     profiles: [ infra ]

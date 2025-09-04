@@ -22,4 +22,4 @@ WORKDIR /app
 # Копируем бинарник
 COPY --from=builder /app/build .
 
-ENTRYPOINT ["./build"]
+CMD ["./build"]
