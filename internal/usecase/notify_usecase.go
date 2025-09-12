@@ -31,21 +31,24 @@ func NewNotifyUsecase(bot *tele.Bot, repo repository.Repository) *NotifyUsecase 
 func (n *NotifyUsecase) Notify(_ context.Context, userIDs []int64) error {
 	date := time.Now().UTC().Format("2006-01-02")
 
-	var messageBuilder strings.Builder
-
-	messageBuilder.WriteString(fmt.Sprintf("📅 Кормление на %s:\n", date))
-
 	feeds, err := n.repo.FeedsByDate(date)
-
 	if err != nil {
 		return fmt.Errorf("get feeds: %w", err)
 	}
 
-	geckos, err := n.repo.Geckos()
+	if len(feeds) == 0 {
+		slog.Info("no feed found")
 
+		return nil
+	}
+
+	geckos, err := n.repo.Geckos()
 	if err != nil {
 		return fmt.Errorf("get geckos: %w", err)
 	}
+
+	var messageBuilder strings.Builder
+	messageBuilder.WriteString(fmt.Sprintf("📅 Кормление на %s:\n", date))
 
 	for _, feed := range feeds {
 		var gecko *domain.Gecko
@@ -70,10 +73,12 @@ func (n *NotifyUsecase) Notify(_ context.Context, userIDs []int64) error {
 		messageBuilder.WriteString(fmt.Sprintf("🦎 %s — корм: %s\n", gecko.Name, feed.FoodType))
 	}
 
+	notifyMessage := messageBuilder.String()
+
 	for _, uid := range userIDs {
 		_, err = n.bot.Send(
 			&tele.User{ID: uid},
-			messageBuilder.String(),
+			notifyMessage,
 		)
 	}
 
